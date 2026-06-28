@@ -1,0 +1,18 @@
+current directory: /Users/aaronquan/Projects/AlzApp/vendor/bundle/ruby/4.0.0/gems/nkf-0.3.0/ext/nkf
+/opt/homebrew/opt/ruby/bin/ruby extconf.rb
+creating Makefile
+
+current directory: /Users/aaronquan/Projects/AlzApp/vendor/bundle/ruby/4.0.0/gems/nkf-0.3.0/ext/nkf
+make -j9 DESTDIR\= sitearchdir\=./.gem.20260627-11314-6z5id0 sitelibdir\=./.gem.20260627-11314-6z5id0 clean
+
+current directory: /Users/aaronquan/Projects/AlzApp/vendor/bundle/ruby/4.0.0/gems/nkf-0.3.0/ext/nkf
+make -j9 DESTDIR\= sitearchdir\=./.gem.20260627-11314-6z5id0 sitelibdir\=./.gem.20260627-11314-6z5id0
+compiling nkf.c
+linking shared-object nkf.bundle
+
+current directory: /Users/aaronquan/Projects/AlzApp/vendor/bundle/ruby/4.0.0/gems/nkf-0.3.0/ext/nkf
+make -j9 DESTDIR\= sitearchdir\=./.gem.20260627-11314-6z5id0 sitelibdir\=./.gem.20260627-11314-6z5id0 install
+/usr/bin/install -c -m 0755 nkf.bundle ./.gem.20260627-11314-6z5id0
+
+current directory: /Users/aaronquan/Projects/AlzApp/vendor/bundle/ruby/4.0.0/gems/nkf-0.3.0/ext/nkf
+make DESTDIR\= sitearchdir\=./.gem.20260627-11314-6z5id0 sitelibdir\=./.gem.20260627-11314-6z5id0 clean
