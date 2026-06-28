@@ -1,97 +1,207 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# AlzApp
 
-# Getting Started
+Caregiver support app for Alzheimer's families.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+---
 
-## Step 1: Start Metro
+## Getting Started
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+### What you need installed first
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- **Xcode 26** — download from the Mac App Store, open it once to accept the license
+- **Node.js** — check with `node -v`, install from https://nodejs.org if missing
+- **CocoaPods** — check with `pod --version`, install with `sudo gem install cocoapods` if missing
 
-```sh
-# Using npm
-npm start
+---
 
-# OR using Yarn
-yarn start
+### Step 1 — Clone the repo
+
+```bash
+git clone https://github.com/YOUR_USERNAME/AlzApp.git
+cd AlzApp
 ```
 
-## Step 2: Build and run your app
+---
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+### Step 2 — Install packages
 
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```bash
+npm install --legacy-peer-deps \
+  "@react-navigation/native@^7" \
+  "@react-navigation/native-stack@^7" \
+  "@react-navigation/bottom-tabs@^7" \
+  "react-native-screens@latest" \
+  "react-native-safe-area-context@^5" \
+  "react-native-gesture-handler@^2" \
+  "@react-native-async-storage/async-storage@^2"
 ```
 
-### iOS
+---
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+### Step 3 — Install iOS dependencies
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+```bash
+cd ios
+pod repo update
+pod install
+cd ..
 ```
 
-Then, and every time you update your native dependencies, run:
+This takes a few minutes. You should see "Pod installation complete!" when it's done.
 
-```sh
-bundle exec pod install
+---
+
+### Step 4 — Run the app
+
+Open **two terminal windows**.
+
+**Terminal 1:**
+```bash
+npx react-native start --reset-cache
 ```
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Wait until you see `Dev server ready` before continuing.
 
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
+**Terminal 2:**
+```bash
+npx react-native run-ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+The first build takes 5–10 minutes. After that it's much faster.
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+You should see the app open on an iPhone simulator with a purple header and a hamburger menu (☰) in the top left.
 
-## Step 3: Modify your app
+---
 
-Now that you have successfully run the app, let's make changes!
+## Daily workflow
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+Once you're set up, you only need these commands each day:
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+**Terminal 1:**
+```bash
+npx react-native start --reset-cache
+```
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+**Terminal 2:**
+```bash
+npx react-native run-ios
+```
 
-## Congratulations! :tada:
+Press **R** in Terminal 1 to reload the app after making code changes.
 
-You've successfully run and modified your React Native App. :partying_face:
+---
 
-### Now what?
+## Getting the latest changes from the team
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+```bash
+git pull
+```
 
-# Troubleshooting
+If someone added new packages, also run:
+```bash
+npm install --legacy-peer-deps
+cd ios && pod install && cd ..
+```
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+---
 
-# Learn More
+## Saving and sharing your changes
 
-To learn more about React Native, take a look at the following resources:
+```bash
+git add .
+git commit -m "brief description of what you changed"
+git push
+```
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+---
+
+## Troubleshooting
+
+**Build fails with `RuntimeAdapter` error**
+
+Do not install `react-native-reanimated` — it does not work with Xcode 26. If it somehow got installed:
+```bash
+npm uninstall react-native-reanimated react-native-worklets --legacy-peer-deps
+cd ios && rm -rf Pods Podfile.lock && pod install && cd ..
+```
+
+**"Nested NavigationContainer" crash**
+
+`AppNavigator.tsx` must not contain a `<NavigationContainer>` tag. `App.tsx` already has one and there can only be one.
+
+**"Unable to resolve module" error**
+
+The filename in the import doesn't match the actual file on disk. Check:
+```bash
+ls src/screens/
+```
+Make sure imports in `AppNavigator.tsx` match exactly.
+
+**App shows old code after you made changes**
+
+Stop Metro and restart it with:
+```bash
+npx react-native start --reset-cache
+```
+
+**Pod install fails**
+
+```bash
+cd ios
+rm -rf Pods Podfile.lock build
+pod repo update
+pod install
+cd ..
+```
+
+---
+
+## Important — do not install these packages
+
+These packages break the build on Xcode 26 and must not be added:
+
+- `react-native-reanimated`
+- `react-native-worklets`
+- `@react-navigation/drawer`
+
+---
+
+## Project structure
+
+```
+AlzApp/
+  src/
+    navigation/
+      AppNavigator.tsx     ← handles all screen navigation
+    screens/
+      HomeScreen.tsx
+      MoodScreen.tsx
+      ResourceLibraryScreen.tsx
+      JournalScreen.tsx
+      CommunityForumScreen.tsx
+      PrivateMessagesScreen.tsx
+      ThankYouScreen.tsx
+      auth/
+        LoginScreen.tsx
+        RegisterScreen.tsx
+    context/
+      AuthContext.tsx
+    theme/
+      colors.ts
+  ios/                     ← native iOS code, do not edit manually
+  App.tsx                  ← root component
+  babel.config.js          ← must not contain reanimated plugin
+  index.js                 ← app entry point
+```
+
+---
+
+## Tested environment
+
+| | Version |
+|---|---|
+| React Native | 0.86.0 |
+| Xcode | 26.x |
+| iOS SDK | 26.5 |
+| Node | v26+ |
+
