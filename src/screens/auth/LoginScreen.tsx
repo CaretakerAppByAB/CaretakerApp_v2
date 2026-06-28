@@ -44,9 +44,7 @@ const LoginScreen = ({navigation}: any) => {
 
         {/* Brand mark */}
         <View style={styles.brand}>
-          <Text style={styles.brandIcon}>🧠</Text>
           <Text style={styles.brandName}>AlzApp</Text>
-          <Text style={styles.brandTagline}>Supporting Those Who Care</Text>
         </View>
 
         {/* Card */}

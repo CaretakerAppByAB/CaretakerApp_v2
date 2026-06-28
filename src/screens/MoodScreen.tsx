@@ -132,18 +132,11 @@ const MoodScreen = () => {
           </View>
         ))}
 
-        {/* Placeholder for mood indicators */}
-        <View style={styles.placeholder}>
-          <Text style={styles.placeholderEmoji}>😊</Text>
-          <Text style={styles.placeholderText}>
-            Mood indicators will appear here once daily check-in is implemented
-          </Text>
-        </View>
       </View>
 
       {/* ── Developer notes ── */}
       <View style={styles.noteCard}>
-        <Text style={styles.noteTitle}>📝 Developer Notes</Text>
+        <Text style={styles.noteTitle}>Developer Notes</Text>
         <Text style={styles.noteText}>
           {'• Show a bottom-sheet modal on page load asking user to rate mood 0–4\n'}
           {'• Emojis: 😢 ☹️ 😐 🙂 😀\n'}

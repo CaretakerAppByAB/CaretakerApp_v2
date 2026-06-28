@@ -69,7 +69,6 @@ const ResourceLibraryScreen = () => {
       {/* ── Single placeholder resource card ── */}
       <View style={styles.card}>
         <View style={styles.cardHeader}>
-          <Text style={styles.cardEmoji}>📚</Text>
           <View style={styles.cardHeaderText}>
             <Text style={styles.cardTitle}>Placeholder Resource</Text>
             <View style={styles.categoryTag}>
@@ -79,9 +78,7 @@ const ResourceLibraryScreen = () => {
         </View>
 
         <Text style={styles.cardDesc}>
-          This is a placeholder resource card. Replace this with a real mental
-          health resource once your content team has curated the library. The
-          Resource interface above shows the data shape to use.
+          Replace this with a real mental health resource. 
         </Text>
 
         {/* Tag pills */}

@@ -32,7 +32,7 @@ const HOME_ACTIONS = [
     title: 'Send a Thank You Note',
     subtitle: 'Brighten a colleague\'s day anonymously',
     emoji: '💌',
-    badge: 2,
+    badge: null,
   },
   {
     key: 'Journal',
@@ -59,7 +59,7 @@ const HomeScreen = ({navigation}: any) => {
       {/* ── Welcome header ── */}
       <View style={styles.welcomeSection}>
         <Text style={styles.welcomeLine}>Welcome back,</Text>
-        <Text style={styles.userName}>{firstName}! 👋</Text>
+        <Text style={styles.userName}>{firstName}!</Text>
         <Text style={styles.subtitle}>What would you like to do today?</Text>
       </View>
 
@@ -68,12 +68,12 @@ const HomeScreen = ({navigation}: any) => {
         style={styles.moodBanner}
         onPress={() => navigation.navigate('Mood')}
         activeOpacity={0.85}>
-        <Text style={styles.moodBannerEmoji}>😊</Text>
+
         <View style={styles.moodBannerBody}>
-          <Text style={styles.moodBannerTitle}>How are you feeling today?</Text>
-          <Text style={styles.moodBannerSub}>Tap to log your mood</Text>
+        <Text style={styles.moodBannerTitle}>How are you feeling today?</Text>
+        <Text style={styles.moodBannerSub}>Tap to log your mood</Text>
         </View>
-        <Text style={styles.moodBannerChevron}>›</Text>
+        <Text style={styles.moodBannerEmoji}>😊</Text>
       </TouchableOpacity>
 
       {/* ── Main action cards ── */}
@@ -101,14 +101,6 @@ const HomeScreen = ({navigation}: any) => {
             </View>
           </TouchableOpacity>
         ))}
-      </View>
-
-      {/* ── Encouragement footer ── */}
-      <View style={styles.encouragement}>
-        <Text style={styles.encouragementIcon}>⭐</Text>
-        <Text style={styles.encouragementQuote}>
-          "The care you give makes a difference every single day."
-        </Text>
       </View>
     </ScrollView>
   );

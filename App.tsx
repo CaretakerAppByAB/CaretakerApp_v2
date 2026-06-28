@@ -1,20 +1,26 @@
-/**
- * AlzApp — Root Component
- *
- * Provider order matters:
- *  1. GestureHandlerRootView  — required by react-native-gesture-handler (drawer swipe)
- *  2. SafeAreaProvider        — required by react-native-safe-area-context
- *  3. AuthProvider            — app-level auth state
- *  4. NavigationContainer     — React Navigation root
- */
-
 import React from 'react';
-import {StyleSheet} from 'react-native';
+import {StyleSheet, View, ActivityIndicator} from 'react-native';
 import {GestureHandlerRootView} from 'react-native-gesture-handler';
 import {SafeAreaProvider} from 'react-native-safe-area-context';
 import {NavigationContainer} from '@react-navigation/native';
-import {AuthProvider} from './src/context/AuthContext';
+import {AuthProvider, useAuth} from './src/context/AuthContext';
 import AppNavigator from './src/navigation/AppNavigator';
+import LoginScreen from './src/screens/auth/LoginScreen';
+
+// Inner component so useAuth can access AuthProvider
+const RootNavigator = () => {
+  const {user, isLoading} = useAuth();
+
+  if (isLoading) {
+    return (
+      <View style={styles.loading}>
+        <ActivityIndicator size="large" color="#8B7EEE" />
+      </View>
+    );
+  }
+
+  return user ? <AppNavigator /> : <LoginScreen />;
+};
 
 const App = (): React.JSX.Element => {
   return (
@@ -22,7 +28,7 @@ const App = (): React.JSX.Element => {
       <SafeAreaProvider>
         <AuthProvider>
           <NavigationContainer>
-            <AppNavigator />
+            <RootNavigator />
           </NavigationContainer>
         </AuthProvider>
       </SafeAreaProvider>
@@ -32,6 +38,7 @@ const App = (): React.JSX.Element => {
 
 const styles = StyleSheet.create({
   root: {flex: 1},
+  loading: {flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F5F3FF'},
 });
 
 export default App;
