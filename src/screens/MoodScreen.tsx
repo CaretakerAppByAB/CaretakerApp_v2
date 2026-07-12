@@ -140,9 +140,6 @@ const MoodScreen = () => {
         <Text style={styles.noteText}>
           {'• Show a bottom-sheet modal on page load asking user to rate mood 0–4\n'}
           {'• Emojis: 😢 ☹️ 😐 🙂 😀\n'}
-          {'• Store: AsyncStorage key @alz_moods_[userId] as \{YYYY-MM-DD: moodIndex\}\n'}
-          {'• Colour each day cell based on the stored mood index\n'}
-          {'• Allow tapping a past day to view/edit its mood'}
         </Text>
       </View>
     </ScrollView>
