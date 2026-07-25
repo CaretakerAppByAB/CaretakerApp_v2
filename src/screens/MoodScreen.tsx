@@ -3,13 +3,13 @@
  * Place at: src/screens/MoodScreen.tsx
  *
  * Changes:
- *  - headerShown: false in AppNavigator, so this screen owns its header
- *  - Large purple header (matches HomeScreen gray header proportions)
- *  - StatusBar styled to match purple header
- *  - Bottom tab bar now visible (screen is inside Tab.Navigator)
+ *  - Added `navigation` prop and `useLayoutEffect` to handle the header via React Navigation.
+ *  - Configured matching properties: height 130, fontSize 18, fontWeight 700.
+ *  - Set `headerShown: true` to guarantee the native header is activated.
+ *  - Removed the inline custom `<View style={s.header}>` block so the native header rules the page.
  */
 
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useLayoutEffect} from 'react';
 import {
   View,
   Text,
@@ -61,16 +61,6 @@ const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const CELL_SIZE   = Math.floor((SW - 56) / 7);
 const FACE_IN_CAL = Math.min(CELL_SIZE - 6, 26);
 const CELL_H      = FACE_IN_CAL + 18;
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-const getGreeting = (): string => {
-  const h = new Date().getHours();
-  if (h >= 5  && h < 12) return 'Good Morning';
-  if (h >= 12 && h < 17) return 'Good Afternoon';
-  if (h >= 17 && h < 21) return 'Good Evening';
-  return 'Good Night';
-};
 
 // ── AsyncStorage ───────────────────────────────────────────────────────────────
 
@@ -190,10 +180,27 @@ const MoodCheckInModal: React.FC<{
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 
-const MoodScreen: React.FC = () => {
+const MoodScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const {user} = useAuth();
-  const uid       = user?.id ?? 'guest';
-  const firstName = user?.name?.split(' ')[0] ?? 'Friend';
+  const uid = user?.id ?? 'guest';
+
+  // Apply navigation header layout explicitly matching CommunityForum
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: true, // Forces native header visibility overrides 
+      title: 'Mood Calendar',
+      headerStyle: {
+        backgroundColor: '#8B7EEE',
+        height: 130,
+      },
+      headerTitleStyle: {
+        fontSize: 18,
+        fontWeight: '700',
+        color: '#FFFFFF',
+      },
+      headerTintColor: '#FFFFFF',
+    });
+  }, [navigation]);
 
   const now = new Date();
   const [year,      setYear]      = useState(now.getFullYear());
@@ -247,7 +254,6 @@ const MoodScreen: React.FC = () => {
     <>
       <MoodCheckInModal visible={showModal} onSelect={handleSelect}/>
 
-      {/* Purple SafeAreaView fills status bar area with purple */}
       <SafeAreaView style={s.safeArea}>
         <StatusBar barStyle="light-content" backgroundColor="#8B7EEE"/>
 
@@ -255,15 +261,6 @@ const MoodScreen: React.FC = () => {
           style={s.scroll}
           contentContainerStyle={s.container}
           showsVerticalScrollIndicator={false}>
-
-          {/* ── Large purple header — mirrors HomeScreen's gray header ── */}
-          <View style={s.header}>
-            <Text style={s.headerTitle}>Mood Tracker</Text>
-            <Text style={s.headerGreeting}>
-              {getGreeting()},{' '}
-              <Text style={s.headerName}>{firstName}!</Text>
-            </Text>
-          </View>
 
           {/* ── Calendar ── */}
           <View style={s.card}>
@@ -341,7 +338,7 @@ const MoodScreen: React.FC = () => {
 const s = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#8B7EEE', // fills status bar area with purple
+    backgroundColor: '#F5F3FF', 
   },
   scroll: {
     flex: 1,
@@ -349,30 +346,6 @@ const s = StyleSheet.create({
   },
   container: {
     paddingBottom: 24,
-  },
-
-  // Large purple header — proportionally similar to HomeScreen's gray header
-  header: {
-    backgroundColor: '#8B7EEE',
-    paddingHorizontal: 22,
-    paddingTop: 18,
-    paddingBottom: 33,
-  },
-  headerTitle: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: -0.5,
-    marginBottom: 6,
-  },
-  headerGreeting: {
-    fontSize: 16,
-    fontWeight: '400',
-    color: 'rgba(255,255,255,0.85)',
-  },
-  headerName: {
-    fontWeight: '700',
-    color: '#FFFFFF',
   },
 
   // Cards

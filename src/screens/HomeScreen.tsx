@@ -3,13 +3,12 @@
  * Place at: src/screens/HomeScreen.tsx
  *
  * Changes in this version:
- *  - All emojis removed (mood circles are plain, profile is drawn with Views)
- *  - Grid tile labels are now INSIDE the tile box at the bottom
- *  - Tiles and all sections made compact so everything fits on screen
- *  - Mood Analysis chart with M T W T F S S days is fully visible
+ *  - Added a Side Panel (Modal) for the profile menu.
+ *  - Clicking the Profile icon opens the side panel.
+ *  - Side panel contains a "Settings" placeholder and a "Log Out" button.
  */
 
-import React, {useState} from 'react';
+import React, {useState, useLayoutEffect} from 'react';
 import {
   View,
   Text,
@@ -19,6 +18,8 @@ import {
   StatusBar,
   Dimensions,
   SafeAreaView,
+  Alert,
+  Modal,
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import {
@@ -139,30 +140,119 @@ const MoodLineChart: React.FC = () => {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 const HomeScreen = ({navigation}: any) => {
-  const {user} = useAuth();
+  const {user, logout} = useAuth(); // Assuming logout is exposed via AuthContext
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
+  const [isSideMenuVisible, setIsSideMenuVisible] = useState(false);
+  
   const displayName = user?.name ?? 'Friend';
 
-  return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#CBCBCB" />
-      <ScrollView
-        style={styles.scroll}
-        showsVerticalScrollIndicator={false}
-        bounces={false}>
+  const handleLogout = () => {
+    Alert.alert('Log Out', 'Are you sure you want to log out?', [
+      {text: 'Cancel', style: 'cancel'},
+      {
+        text: 'Log Out',
+        style: 'destructive',
+        onPress: async () => {
+          if (logout) {
+            await logout();
+          }
+        },
+      },
+    ]);
+  };
 
-        {/* ── Header ── */}
-        <View style={styles.header}>
-          <ProfileIcon />
+  // Apply standardized header
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      headerShown: true,
+      headerTitle: '', // We use left/right components instead of a center title
+      headerStyle: {
+        backgroundColor: '#8B7EEE', // Standard Purple Theme
+        height: 130,
+        elevation: 0,       // Remove shadow on Android
+        shadowOpacity: 0,   // Remove shadow on iOS
+      },
+      headerLeft: () => (
+        <View style={styles.headerLeftContainer}>
           <Text style={styles.greeting}>{getGreeting()}</Text>
           <Text style={styles.userName}>
             {'Mr. '}
             <Text style={styles.userNameBold}>{displayName}</Text>
           </Text>
         </View>
+      ),
+      headerRight: () => (
+        <TouchableOpacity 
+          style={styles.headerRightContainer} 
+          onPress={() => setIsSideMenuVisible(true)}
+          activeOpacity={0.7}
+        >
+          <ProfileIcon />
+        </TouchableOpacity>
+      ),
+    });
+  }, [navigation, displayName, setIsSideMenuVisible]);
 
-        {/* ── White section ── */}
-        <View style={styles.whiteSection}>
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="light-content" backgroundColor="#8B7EEE" />
+      
+      {/* ── Side Menu Modal ── */}
+      <Modal visible={isSideMenuVisible} transparent animationType="fade">
+        <TouchableOpacity 
+          style={styles.modalOverlay} 
+          activeOpacity={1} 
+          onPress={() => setIsSideMenuVisible(false)}
+        >
+          <TouchableOpacity 
+            activeOpacity={1} 
+            style={styles.sidePanel} 
+            onPress={() => {}} // Empty to block taps from closing the modal when clicking the panel itself
+          >
+            <SafeAreaView>
+              <View style={styles.panelHeader}>
+                <Text style={styles.panelTitle}>Menu</Text>
+                <TouchableOpacity 
+                  onPress={() => setIsSideMenuVisible(false)}
+                  style={styles.closeBtn}
+                >
+                  <Text style={styles.closeBtnText}>✕</Text>
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity 
+                style={styles.panelItem}
+                onPress={() => {
+                  setIsSideMenuVisible(false);
+                  Alert.alert('Settings', 'Settings page coming soon!');
+                }}
+              >
+                <Text style={styles.panelItemText}>Settings</Text>
+              </TouchableOpacity>
+
+              <View style={styles.panelDivider} />
+
+              <TouchableOpacity 
+                style={styles.panelItem}
+                onPress={() => {
+                  setIsSideMenuVisible(false);
+                  handleLogout();
+                }}
+              >
+                <Text style={[styles.panelItemText, {color: '#D87E7E'}]}>Log Out</Text>
+              </TouchableOpacity>
+            </SafeAreaView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        bounces={false}>
+
+        {/* ── Main section (formerly white) ── */}
+        <View style={styles.mainSection}>
 
           <View style={styles.divider} />
 
@@ -237,72 +327,126 @@ const HomeScreen = ({navigation}: any) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#CBCBCB',
+    backgroundColor: '#8B7EEE', // Fills status bar area with purple
   },
   scroll: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F5F3FF', // Changed to light lilac
   },
 
-  // ── Header ──
-  header: {
-    backgroundColor: '#CBCBCB',
-    paddingHorizontal: 20,
-    paddingTop: 5,
-    paddingBottom: 5,
+  // ── Header Custom Layout Containers ──
+  headerLeftContainer: {
+    marginLeft: 20,
+    justifyContent: 'center',
+    paddingBottom: 10,
   },
-
-  // Profile icon drawn with Views — no emoji
-  profileCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#9E9E9E',
-    alignItems: 'center',
-    overflow: 'hidden',
-    marginBottom: 10,
-  },
-  personHead: {
-    position: 'absolute',
-    top: 6,
-    width: 13,
-    height: 13,
-    borderRadius: 6.5,
-    backgroundColor: 'rgba(255,255,255,0.85)',
-  },
-  personBody: {
-    position: 'absolute',
-    bottom: -10,
-    width: 28,
-    height: 20,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.85)',
+  headerRightContainer: {
+    marginRight: 20,
+    justifyContent: 'center',
+    paddingBottom: 10,
   },
 
   greeting: {
     fontSize: 20,
     fontWeight: '400',
-    color: '#000000',
+    color: '#FFFFFF',
     lineHeight: 28,
   },
   userName: {
     fontSize: 20,
     fontWeight: '400',
-    color: '#000000',
+    color: '#FFFFFF',
     lineHeight: 28,
   },
   userNameBold: {
     fontWeight: '700',
   },
 
-  // ── White section ──
-  whiteSection: {
+  // Profile icon drawn with Views
+  profileCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E8E8E8', // Lighter background so it pops on purple
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  personHead: {
+    position: 'absolute',
+    top: 8,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#8B7EEE', // Silhouette matches the purple background
+  },
+  personBody: {
+    position: 'absolute',
+    bottom: -12,
+    width: 36,
+    height: 24,
+    borderRadius: 18,
+    backgroundColor: '#8B7EEE', // Silhouette matches the purple background
+  },
+
+  // ── Side Menu Modal ──
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+  },
+  sidePanel: {
+    width: 250,
+    height: '100%',
     backgroundColor: '#FFFFFF',
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: -2, height: 0 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+    elevation: 5,
+  },
+  panelHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 30,
+    marginTop: 10,
+  },
+  panelTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#000000',
+  },
+  closeBtn: {
+    padding: 5,
+  },
+  closeBtnText: {
+    fontSize: 20,
+    color: '#7E7E7E',
+  },
+  panelItem: {
+    paddingVertical: 15,
+  },
+  panelItemText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+  },
+  panelDivider: {
+    height: 1,
+    backgroundColor: '#E8E8E8',
+    marginVertical: 10,
+  },
+
+  // ── Main section ──
+  mainSection: {
+    backgroundColor: '#F5F3FF', // Changed to light lilac
   },
   divider: {
     height: 1,
     marginTop: 10,
-    backgroundColor: '#000000',
+    backgroundColor: 'rgba(0,0,0,0.15)', // Lightened divider to look better on lilac
     marginHorizontal: 24,
   },
 
