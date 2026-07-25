@@ -25,7 +25,7 @@ import CommunityForumScreen   from '../screens/CommunityForumScreen';
 import ResourceLibraryScreen  from '../screens/ResourceLibraryScreen';
 import PrivateMessagesScreen  from '../screens/PrivateMessagesScreen';
 import MoodScreen             from '../screens/MoodScreen';
-
+import ProfileScreen from '../screens/ProfileScreen';
 import {
   HomeIcon,
   JournalIcon,
@@ -154,6 +154,11 @@ export default function AppNavigator() {
         component={MoodScreen}
         options={{headerShown: false}}
       />
+      <Tab.Screen /*also hidden tab*/
+        name="Profile"
+        component={ProfileScreen}
+        options={{headerShown: false}}
+/>
     </Tab.Navigator>
   );
 }
