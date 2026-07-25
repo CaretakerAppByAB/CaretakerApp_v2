@@ -1,4 +1,15 @@
-import React from 'react';
+/**
+ * HomeScreen.tsx — final compact layout
+ * Place at: src/screens/HomeScreen.tsx
+ *
+ * Changes in this version:
+ *  - All emojis removed (mood circles are plain, profile is drawn with Views)
+ *  - Grid tile labels are now INSIDE the tile box at the bottom
+ *  - Tiles and all sections made compact so everything fits on screen
+ *  - Mood Analysis chart with M T W T F S S days is fully visible
+ */
+
+import React, {useState} from 'react';
 import {
   View,
   Text,
@@ -6,243 +17,402 @@ import {
   StyleSheet,
   ScrollView,
   StatusBar,
+  Dimensions,
+  SafeAreaView,
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
-import {Colors} from '../theme/colors';
+import {
+  MoodChartIcon,
+  JournalIcon,
+  CommunityIcon,
+  SupportIcon,
+  MessagesIcon,
+} from '../components/icons/TabIcons';
 
-// ── Action card data ──────────────────────────────────────────────────────────
+const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
-const HOME_ACTIONS = [
-  {
-    key: 'CommunityForum',
-    title: 'Connect with Others',
-    subtitle: 'Join the community forum',
-    emoji: '💬',
-    badge: null,
-  },
-  {
-    key: 'ResourceLibrary',
-    title: 'Referrals',
-    subtitle: 'Mental health resources for you',
-    emoji: '👥',
-    badge: null,
-  },
-  {
-    key: 'ThankYou',
-    title: 'Send a Thank You Note',
-    subtitle: 'Brighten a colleague\'s day anonymously',
-    emoji: '💌',
-    badge: null,
-  },
-  {
-    key: 'Journal',
-    title: 'Open Journal',
-    subtitle: 'Write about your experiences',
-    emoji: '📓',
-    badge: null,
-  },
+// ── Helpers ────────────────────────────────────────────────────────────────────
+
+const getGreeting = (): string => {
+  const h = new Date().getHours();
+  if (h >= 5 && h < 12) return 'Good Morning';
+  if (h >= 12 && h < 17) return 'Good Afternoon';
+  if (h >= 17 && h < 21) return 'Good Evening';
+  return 'Good Night';
+};
+
+// ── Profile icon (no emoji) ────────────────────────────────────────────────────
+
+const ProfileIcon = () => (
+  <View style={styles.profileCircle}>
+    {/* Head */}
+    <View style={styles.personHead} />
+    {/* Body — clipped by profileCircle's overflow:hidden */}
+    <View style={styles.personBody} />
+  </View>
+);
+
+// ── Grid config ────────────────────────────────────────────────────────────────
+
+// 3 columns, 24px side padding each side, 8px gap × 2 between 3 columns
+const TILE_W = Math.floor((SCREEN_WIDTH - 48 - 16) / 3);
+const TILE_H = 140;
+const ICON_SIZE = Math.floor(TILE_W * 0.38);
+
+const GRID_ITEMS = [
+  {screen: 'Mood',      label: 'Mood Calendar', Icon: MoodChartIcon},
+  {screen: 'Journal',   label: 'My Journal',    Icon: JournalIcon},
+  {screen: 'Community', label: 'Community',     Icon: CommunityIcon},
+  {screen: 'Support',   label: 'Get Support',   Icon: SupportIcon},
+  {screen: 'Journal',   label: 'Gratitude',     Icon: null},   // SVG TBD
+  {screen: 'Messages',  label: 'Messages',      Icon: MessagesIcon},
 ];
 
-// ── Component ─────────────────────────────────────────────────────────────────
+// ── Mood chart ─────────────────────────────────────────────────────────────────
 
-const HomeScreen = ({navigation}: any) => {
-  const {user} = useAuth();
-  const firstName = user?.name?.split(' ')[0] ?? 'Friend';
+const CHART_H = 90;
+const CHART_W = SCREEN_WIDTH - 48;
+const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+const WEEKLY_MOOD = [0.25, 0.7, 0.45, 0.6, 0.85, 0.5, 0.35];
+
+const MoodLineChart: React.FC = () => {
+  const step = CHART_W / (WEEKLY_MOOD.length - 1);
+  const getX = (i: number) => i * step;
+  const getY = (val: number) => CHART_H * (1 - val);
+
+  const segments = WEEKLY_MOOD.slice(0, -1).map((_, i) => {
+    const x1 = getX(i);
+    const y1 = getY(WEEKLY_MOOD[i]);
+    const x2 = getX(i + 1);
+    const y2 = getY(WEEKLY_MOOD[i + 1]);
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const length = Math.sqrt(dx * dx + dy * dy);
+    const angle = Math.atan2(dy, dx) * (180 / Math.PI);
+    return {midX: (x1 + x2) / 2, midY: (y1 + y2) / 2, length, angle};
+  });
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}>
-      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
-
-      {/* ── Welcome header ── */}
-      <View style={styles.welcomeSection}>
-        <Text style={styles.welcomeLine}>Welcome back,</Text>
-        <Text style={styles.userName}>{firstName}!</Text>
-        <Text style={styles.subtitle}>What would you like to do today?</Text>
-      </View>
-
-      {/* ── Mood quick-access banner ── */}
-      <TouchableOpacity
-        style={styles.moodBanner}
-        onPress={() => navigation.navigate('Mood')}
-        activeOpacity={0.85}>
-
-        <View style={styles.moodBannerBody}>
-        <Text style={styles.moodBannerTitle}>How are you feeling today?</Text>
-        <Text style={styles.moodBannerSub}>Tap to log your mood</Text>
-        </View>
-        <Text style={styles.moodBannerEmoji}>😊</Text>
-      </TouchableOpacity>
-
-      {/* ── Main action cards ── */}
-      <View style={styles.actionsSection}>
-        {HOME_ACTIONS.map(action => (
-          <TouchableOpacity
-            key={action.key}
-            style={styles.actionCard}
-            onPress={() => navigation.navigate(action.key)}
-            activeOpacity={0.82}>
-            {/* Left text */}
-            <View style={styles.actionLeft}>
-              <Text style={styles.actionTitle}>{action.title}</Text>
-              <Text style={styles.actionSubtitle}>{action.subtitle}</Text>
-            </View>
-
-            {/* Right: optional badge + emoji */}
-            <View style={styles.actionRight}>
-              {action.badge !== null && (
-                <View style={styles.badgeChip}>
-                  <Text style={styles.badgeText}>{action.badge}</Text>
-                </View>
-              )}
-              <Text style={styles.actionEmoji}>{action.emoji}</Text>
-            </View>
-          </TouchableOpacity>
+    <View>
+      {/* Chart area */}
+      <View style={{height: CHART_H, width: CHART_W, marginHorizontal: 24}}>
+        {segments.map((seg, i) => (
+          <View
+            key={`ln-${i}`}
+            style={{
+              position: 'absolute',
+              width: seg.length,
+              height: 1.5,
+              backgroundColor: '#9E9E9E',
+              left: seg.midX - seg.length / 2,
+              top: seg.midY,
+              transform: [{rotate: `${seg.angle}deg`}],
+            }}
+          />
+        ))}
+        {WEEKLY_MOOD.map((val, i) => (
+          <View
+            key={`dt-${i}`}
+            style={{
+              position: 'absolute',
+              width: 20,
+              height: 20,
+              borderRadius: 10,
+              backgroundColor: '#7E7E7E',
+              left: getX(i) - 10,
+              top: getY(val) - 10,
+            }}
+          />
         ))}
       </View>
-    </ScrollView>
+
+      {/* Day labels */}
+      <View style={styles.daysRow}>
+        {DAYS.map((d, i) => (
+          <Text key={i} style={styles.dayLabel}>{d}</Text>
+        ))}
+      </View>
+    </View>
   );
 };
 
-// ── Styles ────────────────────────────────────────────────────────────────────
+// ── Main component ─────────────────────────────────────────────────────────────
+
+const HomeScreen = ({navigation}: any) => {
+  const {user} = useAuth();
+  const [selectedMood, setSelectedMood] = useState<number | null>(null);
+  const displayName = user?.name ?? 'Friend';
+
+  return (
+    <SafeAreaView style={styles.safeArea}>
+      <StatusBar barStyle="dark-content" backgroundColor="#CBCBCB" />
+      <ScrollView
+        style={styles.scroll}
+        showsVerticalScrollIndicator={false}
+        bounces={false}>
+
+        {/* ── Header ── */}
+        <View style={styles.header}>
+          <ProfileIcon />
+          <Text style={styles.greeting}>{getGreeting()}</Text>
+          <Text style={styles.userName}>
+            {'Mr. '}
+            <Text style={styles.userNameBold}>{displayName}</Text>
+          </Text>
+        </View>
+
+        {/* ── White section ── */}
+        <View style={styles.whiteSection}>
+
+          <View style={styles.divider} />
+
+          {/* Mood picker — plain circles, no emoji */}
+          <Text style={styles.moodPrompt}>How are you feeling today?</Text>
+          <View style={styles.moodRow}>
+            {[0, 1, 2, 3, 4].map(i => (
+              <TouchableOpacity
+                key={i}
+                onPress={() => setSelectedMood(i)}
+                activeOpacity={0.8}
+                style={[
+                  styles.moodCircle,
+                  selectedMood === i && styles.moodCircleSelected,
+                ]}
+              />
+            ))}
+          </View>
+
+          <View style={styles.divider} />
+
+          {/* 3×2 grid — labels inside tiles */}
+          <View style={styles.grid}>
+            {GRID_ITEMS.map((item, i) => (
+              <TouchableOpacity
+                key={i}
+                activeOpacity={0.75}
+                onPress={() => navigation.navigate(item.screen)}>
+                <View style={styles.tileBox}>
+                  {/* Icon area */}
+                  <View style={styles.tileIconArea}>
+                    {item.Icon && (
+                      <item.Icon color="#FFFFFF" size={ICON_SIZE} />
+                    )}
+                  </View>
+                  {/* Label inside tile at bottom */}
+                  <Text style={styles.tileLabel} numberOfLines={1}>
+                    {item.label}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+        </View>
+
+        {/* ── Mood Analysis ── */}
+        <View style={styles.analysisSection}>
+          <Text style={styles.analysisTitle}>Mood Analysis</Text>
+          <View style={styles.analysisSubRow}>
+            <Text style={styles.analysisSubtitle}>  This week</Text>
+            <View style={styles.arrowGroup}>
+              <TouchableOpacity style={styles.arrowBtn}>
+                <Text style={styles.arrowText}>‹</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.arrowBtn}>
+                <Text style={styles.arrowText}>›</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          <MoodLineChart />
+          <View style={{height: 12}} />
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
+  );
+};
+
+// ── Styles ─────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#CBCBCB',
+  },
   scroll: {
     flex: 1,
-    backgroundColor: Colors.backgroundLight,
-  },
-  container: {
-    paddingBottom: 40,
+    backgroundColor: '#FFFFFF',
   },
 
-  // Welcome
-  welcomeSection: {
-    paddingHorizontal: 22,
-    paddingTop: 24,
-    paddingBottom: 20,
+  // ── Header ──
+  header: {
+    backgroundColor: '#CBCBCB',
+    paddingHorizontal: 20,
+    paddingTop: 10,
+    paddingBottom: 18,
   },
-  welcomeLine: {
-    fontSize: 18,
-    color: Colors.textSecondary,
+
+  // Profile icon drawn with Views — no emoji
+  profileCircle: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#9E9E9E',
+    alignItems: 'center',
+    overflow: 'hidden',
+    marginBottom: 10,
+  },
+  personHead: {
+    position: 'absolute',
+    top: 6,
+    width: 13,
+    height: 13,
+    borderRadius: 6.5,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+  },
+  personBody: {
+    position: 'absolute',
+    bottom: -10,
+    width: 28,
+    height: 20,
+    borderRadius: 14,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+  },
+
+  greeting: {
+    fontSize: 20,
     fontWeight: '400',
+    color: '#000000',
+    lineHeight: 28,
   },
   userName: {
-    fontSize: 30,
-    fontWeight: '800',
-    color: Colors.text,
-    letterSpacing: -0.5,
-    marginBottom: 4,
+    fontSize: 20,
+    fontWeight: '400',
+    color: '#000000',
+    lineHeight: 28,
   },
-  subtitle: {
+  userNameBold: {
+    fontWeight: '700',
+  },
+
+  // ── White section ──
+  whiteSection: {
+    backgroundColor: '#FFFFFF',
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#000000',
+    marginHorizontal: 24,
+  },
+
+  // ── Mood picker — plain circles ──
+  moodPrompt: {
+    textAlign: 'center',
     fontSize: 14,
-    color: Colors.textSecondary,
+    fontWeight: '500',
+    color: '#000000',
+    marginTop: 12,
+    marginBottom: 10,
   },
-
-  // Mood banner
-  moodBanner: {
-    marginHorizontal: 22,
-    marginBottom: 22,
-    backgroundColor: Colors.primary,
-    borderRadius: 18,
-    padding: 18,
+  moodRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.32,
-    shadowRadius: 10,
-    elevation: 5,
-  },
-  moodBannerEmoji: {fontSize: 32, marginRight: 14},
-  moodBannerBody: {flex: 1},
-  moodBannerTitle: {
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: 15,
-  },
-  moodBannerSub: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  moodBannerChevron: {
-    color: Colors.white,
-    fontSize: 26,
-    fontWeight: '300',
-    marginLeft: 6,
-  },
-
-  // Action cards
-  actionsSection: {
-    paddingHorizontal: 22,
-  },
-  actionCard: {
-    backgroundColor: Colors.primary,
-    borderRadius: 18,
-    paddingVertical: 20,
+    justifyContent: 'center',
+    gap: 8,
     paddingHorizontal: 20,
-    marginBottom: 14,
+    marginBottom: 12,
+  },
+  moodCircle: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#D9D9D9',
+  },
+  moodCircleSelected: {
+    backgroundColor: '#A18CE6',
+    transform: [{scale: 1.1}],
+  },
+
+  // ── Grid — labels inside tiles ──
+  grid: {
     flexDirection: 'row',
-    alignItems: 'center',
-    shadowColor: Colors.primary,
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.22,
-    shadowRadius: 8,
-    elevation: 4,
+    flexWrap: 'wrap',
+    paddingHorizontal: 24,
+    paddingTop: 10,
+    paddingBottom: 14,
+    gap: 8,
   },
-  actionLeft: {flex: 1, paddingRight: 8},
-  actionTitle: {
-    color: Colors.white,
-    fontWeight: '700',
-    fontSize: 17,
-    marginBottom: 3,
-  },
-  actionSubtitle: {
-    color: 'rgba(255,255,255,0.72)',
-    fontSize: 12,
-  },
-  actionRight: {
-    flexDirection: 'row',
+  tileBox: {
+    width: TILE_W,
+    height: TILE_H,
+    backgroundColor: '#D9D9D9',
+    borderRadius: 10,
+    overflow: 'hidden',
     alignItems: 'center',
   },
-  badgeChip: {
-    backgroundColor: Colors.white,
-    borderRadius: 12,
-    minWidth: 22,
-    height: 22,
+  tileIconArea: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 5,
-    marginRight: 8,
   },
-  badgeText: {
-    color: Colors.primary,
-    fontSize: 11,
-    fontWeight: '800',
+  tileLabel: {
+    fontSize: 10,
+    fontWeight: '500',
+    color: '#000000',
+    paddingBottom: 7,
+    paddingHorizontal: 4,
+    textAlign: 'center',
   },
-  actionEmoji: {fontSize: 26},
 
-  // Encouragement
-  encouragement: {
-    marginHorizontal: 22,
-    marginTop: 8,
-    backgroundColor: Colors.white,
-    borderRadius: 16,
-    padding: 16,
+  // ── Mood Analysis ──
+  analysisSection: {
+    backgroundColor: '#E9E9E9',
+    paddingTop: 12,
+  },
+  analysisTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#000000',
+    paddingHorizontal: 16,
+  },
+  analysisSubRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    marginTop: 2,
+    marginBottom: 10,
   },
-  encouragementIcon: {fontSize: 20, marginRight: 12},
-  encouragementQuote: {
-    flex: 1,
+  analysisSubtitle: {
     fontSize: 13,
-    color: Colors.textSecondary,
-    fontStyle: 'italic',
-    lineHeight: 19,
+    fontWeight: '400',
+    color: '#000000',
+  },
+  arrowGroup: {
+    flexDirection: 'row',
+  },
+  arrowBtn: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  arrowText: {
+    fontSize: 22,
+    color: '#000000',
+    fontWeight: '300',
+  },
+
+  // Chart days
+  daysRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    marginTop: 8,
+  },
+  dayLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#000000',
+    width: 18,
+    textAlign: 'center',
   },
 });
 
