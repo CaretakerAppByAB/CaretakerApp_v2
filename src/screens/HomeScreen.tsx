@@ -219,7 +219,14 @@ const HomeScreen = ({navigation}: any) => {
                   <Text style={styles.closeBtnText}>✕</Text>
                 </TouchableOpacity>
               </View>
-
+              <TouchableOpacity
+                style={styles.panelItem}
+                onPress={() => {
+                  setIsSideMenuVisible(false);
+                navigation.navigate('Profile');}}
+>
+  <Text style={styles.panelItemText}>Edit Profile</Text>
+</TouchableOpacity>
               <TouchableOpacity 
                 style={styles.panelItem}
                 onPress={() => {
