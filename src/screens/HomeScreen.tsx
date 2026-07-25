@@ -248,8 +248,8 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#CBCBCB',
     paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 18,
+    paddingTop: 5,
+    paddingBottom: 5,
   },
 
   // Profile icon drawn with Views — no emoji
@@ -301,6 +301,7 @@ const styles = StyleSheet.create({
   },
   divider: {
     height: 1,
+    marginTop: 10,
     backgroundColor: '#000000',
     marginHorizontal: 24,
   },
