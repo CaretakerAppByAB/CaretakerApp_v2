@@ -6,6 +6,7 @@
  *  - Added a Side Panel (Modal) for the profile menu.
  *  - Clicking the Profile icon opens the side panel.
  *  - Side panel contains a "Settings" placeholder and a "Log Out" button.
+ * / 7/25/26 - added edit profile option 
  */
 
 import React, {useState, useLayoutEffect} from 'react';
@@ -226,6 +227,15 @@ const HomeScreen = ({navigation}: any) => {
                 navigation.navigate('Profile');}}
 >
   <Text style={styles.panelItemText}>Edit Profile</Text>
+</TouchableOpacity>
+              <TouchableOpacity
+                style={styles.panelItem}
+                onPress={() => {
+                  setIsSideMenuVisible(false);
+                navigation.navigate('NotificationPreferences');
+                }}
+>
+  <Text style={styles.panelItemText}>Notification Preferences</Text>
 </TouchableOpacity>
               <TouchableOpacity 
                 style={styles.panelItem}

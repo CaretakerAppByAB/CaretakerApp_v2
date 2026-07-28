@@ -26,6 +26,7 @@ import ResourceLibraryScreen  from '../screens/ResourceLibraryScreen';
 import PrivateMessagesScreen  from '../screens/PrivateMessagesScreen';
 import MoodScreen             from '../screens/MoodScreen';
 import ProfileScreen from '../screens/ProfileScreen';
+import NotificationPreferencesScreen from '../screens/NotificationPreferencesScreen';
 import {
   HomeIcon,
   JournalIcon,
@@ -158,7 +159,13 @@ export default function AppNavigator() {
         name="Profile"
         component={ProfileScreen}
         options={{headerShown: false}}
-/>
+      />
+      <Tab.Screen
+        name = "NotificationPreferences"
+        component ={NotificationPreferencesScreen}
+        options = {{headerShown: false}}
+        
+      />
     </Tab.Navigator>
   );
 }

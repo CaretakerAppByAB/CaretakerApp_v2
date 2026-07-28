@@ -35,6 +35,7 @@ const ProfileScreen = ({navigation}: any) => {
       title: 'Notifications',
       icon: '🔔',
       onPress: () => Alert.alert('Coming Soon'),
+      
     },
     {
       title: 'Settings',
