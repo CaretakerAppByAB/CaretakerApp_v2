@@ -1,197 +1,138 @@
+/**
+ * src/screens/auth/LoginScreen.tsx
+ * Replace your existing file with this one.
+ */
+
 import React, {useState} from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-  ActivityIndicator,
-  ScrollView,
+  View, Text, TextInput, TouchableOpacity,
+  StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView,
+  Platform, ScrollView,
 } from 'react-native';
 import {useAuth} from '../../context/AuthContext';
-import {Colors} from '../../theme/colors';
 
-const LoginScreen = ({navigation}: any) => {
-  const {login} = useAuth();
-  const [email, setEmail] = useState('');
+const LoginScreen: React.FC<{navigation: any}> = ({navigation}) => {
+  const {login}       = useAuth();
+  const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+  const [loading,  setLoading]  = useState(false);
 
   const handleLogin = async () => {
     if (!email.trim() || !password) {
-      Alert.alert('Missing Info', 'Please enter your email and password.');
+      Alert.alert('Missing fields', 'Please enter your email and password.');
       return;
     }
     setLoading(true);
-    const {success, error} = await login(email.trim(), password);
-    setLoading(false);
-    if (!success) {
-      Alert.alert('Login Failed', error || 'Please check your credentials.');
+    try {
+      await login(email, password);
+      // onAuthStateChanged in AuthContext will update the user and
+      // RootNavigator in App.tsx will automatically switch to AppNavigator
+    } catch (err: any) {
+      const code = err?.code ?? '';
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' ||
+          code === 'auth/invalid-credential') {
+        Alert.alert('Login failed', 'Incorrect email or password.');
+      } else if (code === 'auth/invalid-email') {
+        Alert.alert('Login failed', 'Please enter a valid email address.');
+      } else if (code === 'auth/too-many-requests') {
+        Alert.alert('Too many attempts', 'Please wait a moment and try again.');
+      } else {
+        Alert.alert('Error', err?.message ?? 'Login failed. Check your connection.');
+      }
+    } finally {
+      setLoading(false);
     }
-    // On success the navigator auto-switches to Main (AuthContext user is set)
   };
 
   return (
     <KeyboardAvoidingView
-      style={styles.flex}
+      style={s.flex}
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
-        contentContainerStyle={styles.container}
+        contentContainerStyle={s.container}
         keyboardShouldPersistTaps="handled">
 
-        {/* Brand mark */}
-        <View style={styles.brand}>
-          <Text style={styles.brandName}>AlzApp</Text>
+        {/* Header */}
+        <View style={s.header}>
+          <Text style={s.appName}>AlzApp</Text>
+          <Text style={s.tagline}>Caregiver Support</Text>
         </View>
 
-        {/* Card */}
-        <View style={styles.card}>
-          <Text style={styles.cardTitle}>Welcome Back</Text>
+        {/* Form */}
+        <View style={s.form}>
+          <Text style={s.label}>Email</Text>
+          <TextInput
+            style={s.input}
+            placeholder="you@example.com"
+            placeholderTextColor="#BBBBBB"
+            value={email}
+            onChangeText={setEmail}
+            autoCapitalize="none"
+            keyboardType="email-address"
+            autoComplete="email"
+            returnKeyType="next"
+          />
 
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="your@email.com"
-              placeholderTextColor={Colors.textSecondary}
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="next"
-            />
-          </View>
-
-          <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="••••••••"
-              placeholderTextColor={Colors.textSecondary}
-              value={password}
-              onChangeText={setPassword}
-              secureTextEntry
-              returnKeyType="done"
-              onSubmitEditing={handleLogin}
-            />
-          </View>
+          <Text style={s.label}>Password</Text>
+          <TextInput
+            style={s.input}
+            placeholder="••••••••"
+            placeholderTextColor="#BBBBBB"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+            returnKeyType="done"
+            onSubmitEditing={handleLogin}
+          />
 
           <TouchableOpacity
-            style={[styles.primaryBtn, loading && styles.primaryBtnDisabled]}
+            style={[s.btn, loading && s.btnDisabled]}
             onPress={handleLogin}
             disabled={loading}
             activeOpacity={0.85}>
-            {loading ? (
-              <ActivityIndicator color={Colors.white} />
-            ) : (
-              <Text style={styles.primaryBtnText}>Sign In</Text>
-            )}
+            {loading
+              ? <ActivityIndicator color="#fff"/>
+              : <Text style={s.btnText}>Sign In</Text>
+            }
           </TouchableOpacity>
-
-          <View style={styles.divider} />
-
-          <View style={styles.row}>
-            <Text style={styles.secondaryText}>Don't have an account? </Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Register')}>
-              <Text style={styles.link}>Create one</Text>
-            </TouchableOpacity>
-          </View>
         </View>
+
+        {/* Register link */}
+        <View style={s.footer}>
+          <Text style={s.footerText}>Don't have an account? </Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Register')}>
+            <Text style={s.footerLink}>Create one</Text>
+          </TouchableOpacity>
+        </View>
+
       </ScrollView>
     </KeyboardAvoidingView>
   );
 };
 
-const styles = StyleSheet.create({
-  flex: {flex: 1, backgroundColor: Colors.backgroundLight},
-  container: {
-    flexGrow: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 48,
-  },
-  brand: {
-    alignItems: 'center',
-    marginBottom: 36,
-  },
-  brandIcon: {fontSize: 60, marginBottom: 10},
-  brandName: {
-    fontSize: 38,
-    fontWeight: '800',
-    color: Colors.primary,
-    letterSpacing: -1,
-  },
-  brandTagline: {
-    fontSize: 14,
-    color: Colors.textSecondary,
-    marginTop: 4,
-    fontWeight: '500',
-  },
-  card: {
-    backgroundColor: Colors.white,
-    borderRadius: 24,
-    padding: 28,
-    shadowColor: Colors.primary,
-    shadowOffset: {width: 0, height: 6},
-    shadowOpacity: 0.12,
-    shadowRadius: 16,
-    elevation: 6,
-  },
-  cardTitle: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 22,
-    textAlign: 'center',
-  },
-  inputGroup: {marginBottom: 16},
-  label: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: Colors.text,
-    marginBottom: 6,
-  },
+const s = StyleSheet.create({
+  flex:      {flex: 1, backgroundColor: '#F5F3FF'},
+  container: {flexGrow: 1, justifyContent: 'center', padding: 28},
+  header:    {alignItems: 'center', marginBottom: 40},
+  appName:   {fontSize: 38, fontWeight: '800', color: '#8B7EEE'},
+  tagline:   {fontSize: 15, color: '#7E7E7E', marginTop: 4},
+  form:      {gap: 6},
+  label:     {fontSize: 13, fontWeight: '600', color: '#444', marginBottom: 2, marginTop: 12},
   input: {
-    borderWidth: 1.5,
-    borderColor: Colors.border,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 13,
-    fontSize: 15,
-    color: Colors.text,
-    backgroundColor: Colors.backgroundLight,
+    backgroundColor: '#FFFFFF', borderRadius: 12,
+    paddingHorizontal: 16, paddingVertical: 14,
+    fontSize: 15, color: '#000',
+    borderWidth: 1, borderColor: '#E0E0E0',
   },
-  primaryBtn: {
-    backgroundColor: Colors.primary,
-    paddingVertical: 16,
-    borderRadius: 14,
-    alignItems: 'center',
-    marginTop: 8,
-    shadowColor: Colors.primary,
-    shadowOffset: {width: 0, height: 4},
-    shadowOpacity: 0.35,
-    shadowRadius: 8,
-    elevation: 4,
+  btn: {
+    backgroundColor: '#8B7EEE', borderRadius: 12,
+    paddingVertical: 15, alignItems: 'center', marginTop: 24,
   },
-  primaryBtnDisabled: {opacity: 0.6},
-  primaryBtnText: {
-    color: Colors.white,
-    fontSize: 16,
-    fontWeight: '700',
-    letterSpacing: 0.3,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: Colors.border,
-    marginVertical: 20,
-  },
-  row: {flexDirection: 'row', justifyContent: 'center'},
-  secondaryText: {color: Colors.textSecondary, fontSize: 14},
-  link: {color: Colors.primary, fontSize: 14, fontWeight: '700'},
+  btnDisabled: {opacity: 0.6},
+  btnText:     {color: '#fff', fontSize: 16, fontWeight: '700'},
+  footer:      {flexDirection: 'row', justifyContent: 'center', marginTop: 28},
+  footerText:  {fontSize: 14, color: '#7E7E7E'},
+  footerLink:  {fontSize: 14, color: '#8B7EEE', fontWeight: '700'},
 });
 
 export default LoginScreen;

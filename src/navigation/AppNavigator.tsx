@@ -133,9 +133,10 @@ export default function AppNavigator() {
     <Tab.Navigator
       tabBar={(props: BottomTabBarProps) => <CustomTabBar {...props}/>}
       screenOptions={{
-        headerStyle:      {backgroundColor: '#8B7EEE'},
+        headerStyle:      {backgroundColor: '#8B7EEE', height: 130},
         headerTintColor:  '#FFFFFF',
-        headerTitleStyle: {fontWeight: 'bold', fontSize: 18},
+        headerTitleStyle: {fontWeight: '700', fontSize: 18, color: '#FFFFFF'},
+        headerTitleAlign: 'center',
       }}>
 
       {/* ── Visible tabs ── */}

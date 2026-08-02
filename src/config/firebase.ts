@@ -1,21 +1,17 @@
 /**
- * src/config/firebase.ts
+ * src/config/firebase.ts  — replace your existing file with this one
  *
- * This file connects your app to Firebase (Google's cloud database).
- * You need to fill in the config values below with YOUR project's values.
- *
- * HOW TO GET YOUR CONFIG VALUES:
- * 1. Go to https://console.firebase.google.com
- * 2. Click your project (or create one — see SETUP.md)
- * 3. Click the gear icon ⚙️ → Project Settings
- * 4. Scroll down to "Your apps" → click your web app (</>)
- * 5. Copy each value from the firebaseConfig object shown there
- * 6. Paste them into the fields below, replacing each "PASTE_..." placeholder
+ * Changes from previous version:
+ *  - Added Firebase Auth with AsyncStorage persistence
+ *    (users stay logged in after closing the app)
  */
 
-import {initializeApp, getApps, getApp} from 'firebase/app';
-import {initializeFirestore}             from 'firebase/firestore';
+import {getApps, initializeApp} from 'firebase/app';
+import {getFirestore, initializeFirestore} from 'firebase/firestore';
+import {initializeAuth, getAuth, getReactNativePersistence} from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
+// ▼ YOUR CONFIG — same values you already pasted for the community forum ▼
 const firebaseConfig = {
   apiKey: "AIzaSyA91dfG84uVDpbIhpCUOMxyyAXvz8O4-r4",
   authDomain: "alzapp-f3f03.firebaseapp.com",
@@ -26,14 +22,22 @@ const firebaseConfig = {
   measurementId: "G-SDENDJ8M0V"
 };
 
+// ▲ YOUR CONFIG ▲
 
-// This guard prevents "Firebase already initialized" crashes
-// when React Native's hot-reload re-runs this file
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+// Guard against double-initialisation during hot reload
+if (!getApps().length) {
+  const app = initializeApp(firebaseConfig);
 
-// experimentalForceLongPolling: true is REQUIRED for React Native.
-// Without it, Firestore tries to use WebSocket which doesn't work reliably
-// in React Native — this switches it to plain HTTP, which always works.
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true,
-});
+  // experimentalForceLongPolling required for React Native
+  initializeFirestore(app, {experimentalForceLongPolling: true});
+
+  // getReactNativePersistence keeps the user logged in across app restarts
+  initializeAuth(app, {
+    persistence: getReactNativePersistence(AsyncStorage),
+  });
+}
+
+const app = getApps()[0];
+
+export const db   = getFirestore(app);
+export const auth = getAuth(app);

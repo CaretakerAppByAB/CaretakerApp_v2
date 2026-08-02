@@ -145,6 +145,8 @@ const HomeScreen = ({navigation}: any) => {
   const [isSideMenuVisible, setIsSideMenuVisible] = useState(false);
   
   const displayName = user?.name ?? 'Friend';
+  const firstName = (displayName.split(' ')[0] ?? displayName).trim();
+  const greetingText = `${getGreeting()}, ${firstName}`;
 
   const handleLogout = () => {
     Alert.alert('Log Out', 'Are you sure you want to log out?', [
@@ -165,22 +167,20 @@ const HomeScreen = ({navigation}: any) => {
   useLayoutEffect(() => {
     navigation.setOptions({
       headerShown: true,
-      headerTitle: '', // We use left/right components instead of a center title
-      headerStyle: {
-        backgroundColor: '#8B7EEE', // Standard Purple Theme
-        height: 130,
-        elevation: 0,       // Remove shadow on Android
-        shadowOpacity: 0,   // Remove shadow on iOS
-      },
-      headerLeft: () => (
-        <View style={styles.headerLeftContainer}>
-          <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.userName}>
-            {'Mr. '}
-            <Text style={styles.userNameBold}>{displayName}</Text>
-          </Text>
+      headerTitle: () => (
+        <View style={styles.headerTitleContainer}>
+          <Text style={styles.headerTitleText}>Home</Text>
+          <Text style={styles.headerSubtitleText}>{greetingText}</Text>
         </View>
       ),
+      headerTitleAlign: 'center',
+      headerStyle: {
+        backgroundColor: '#8B7EEE',
+        height: 130,
+        elevation: 0,
+        shadowOpacity: 0,
+      },
+      headerTintColor: '#FFFFFF',
       headerRight: () => (
         <TouchableOpacity 
           style={styles.headerRightContainer} 
@@ -191,7 +191,7 @@ const HomeScreen = ({navigation}: any) => {
         </TouchableOpacity>
       ),
     });
-  }, [navigation, displayName, setIsSideMenuVisible]);
+  }, [navigation, greetingText, setIsSideMenuVisible]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -335,31 +335,28 @@ const styles = StyleSheet.create({
   },
 
   // ── Header Custom Layout Containers ──
-  headerLeftContainer: {
-    marginLeft: 20,
+  headerTitleContainer: {
+    alignItems: 'center',
     justifyContent: 'center',
-    paddingBottom: 10,
+    paddingBottom: 6,
+  },
+  headerTitleText: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    lineHeight: 22,
+  },
+  headerSubtitleText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#FFFFFF',
+    lineHeight: 18,
+    marginTop: 2,
   },
   headerRightContainer: {
     marginRight: 20,
     justifyContent: 'center',
     paddingBottom: 10,
-  },
-
-  greeting: {
-    fontSize: 20,
-    fontWeight: '400',
-    color: '#FFFFFF',
-    lineHeight: 28,
-  },
-  userName: {
-    fontSize: 20,
-    fontWeight: '400',
-    color: '#FFFFFF',
-    lineHeight: 28,
-  },
-  userNameBold: {
-    fontWeight: '700',
   },
 
   // Profile icon drawn with Views
