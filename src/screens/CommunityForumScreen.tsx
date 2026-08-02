@@ -2,166 +2,37 @@
  * CommunityForumScreen.tsx
  * Place at: src/screens/CommunityForumScreen.tsx
  *
- * DATA ARCHITECTURE NOTE:
- * ─────────────────────────────────────────────────────────────────
- * Currently uses static mock data. To connect a real backend:
- *
- * 1. Install Firebase:  npm install @react-native-firebase/app
- *                       npm install @react-native-firebase/firestore
- *
- * 2. Firestore structure:
- *    /posts/{postId}
- *      - authorId: string
- *      - authorName: string
- *      - authorHandle: string
- *      - content: string
- *      - likedBy: string[]   (array of userIds)
- *      - commentCount: number
- *      - timestamp: Timestamp
- *      - tab: 'Trending' | 'Events'
- *
- *    /posts/{postId}/comments/{commentId}
- *      - authorId: string
- *      - content: string
- *      - timestamp: Timestamp
- *
- * 3. Replace the MOCK_POSTS constant below with a Firestore query:
- *    const q = query(collection(db, 'posts'),
- *                    where('tab', '==', activeTab),
- *                    orderBy('timestamp', 'desc'));
- *    const snapshot = await getDocs(q);
- *
- * 'Following' tab: filter by posts where authorId is in
- * the current user's following array.
- * ─────────────────────────────────────────────────────────────────
+ * Connected to Firebase Firestore.
+ * Posts are real — everyone on the same Firebase project sees them instantly.
  */
 
-import React, {useState, useLayoutEffect} from 'react';import {
+import React, {useState, useEffect, useRef} from 'react';
+import {
   View,
   Text,
   ScrollView,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
+  Modal,
+  ActivityIndicator,
+  Alert,
+  KeyboardAvoidingView,
+  Platform,
   Dimensions,
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
-
+import {useAuth} from '../context/AuthContext';
+import {
+  subscribeToPosts,
+  createPost,
+  toggleLike,
+  getDeviceId,
+  Post,
+  TabName,
+} from '../services/communityService';
 
 const {width: SW} = Dimensions.get('window');
-
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-type TabName = 'Trending' | 'Following' | 'Events';
-
-interface Post {
-  id: string;
-  author: string;
-  handle: string;
-  content: string;
-  likes: number;
-  comments: number;
-}
-
-// ── Mock data — swap each array for a Firestore query later ───────────────────
-
-const MOCK_POSTS: Record<TabName, Post[]> = {
-  Trending: [
-    {
-      id: 't1',
-      author: 'Diana Ambrose',
-      handle: '@diana.A',
-      content:
-        'May we all find balance in our lives. Between the inner and outer, yin and yang.',
-      likes: 20,
-      comments: 5,
-    },
-    {
-      id: 't2',
-      author: 'Michael John',
-      handle: '@John.M',
-      content:
-        'Your mental health is just as important as your physical health. Rest is not a reward — it is a requirement.',
-      likes: 14,
-      comments: 10,
-    },
-    {
-      id: 't3',
-      author: 'Christina Jacob',
-      handle: '@Christina.J',
-      content:
-        'Taking care of your mental health is an act of self-love. You cannot pour from an empty cup.',
-      likes: 19,
-      comments: 8,
-    },
-    {
-      id: 't4',
-      author: 'Robert Nguyen',
-      handle: '@robert.n',
-      content:
-        'Three years as a caregiver taught me that asking for help is one of the bravest things you can do.',
-      likes: 37,
-      comments: 14,
-    },
-  ],
-  Following: [
-    {
-      id: 'f1',
-      author: 'Sarah Chen',
-      handle: '@sarah.c',
-      content:
-        'My mom recognised me today for the first time in months. Small victories matter more than anything.',
-      likes: 45,
-      comments: 23,
-    },
-    {
-      id: 'f2',
-      author: 'Alex Rivera',
-      handle: '@alex.r',
-      content:
-        'Found a great respite care service in my area. Happy to share the details — just comment below.',
-      likes: 8,
-      comments: 12,
-    },
-    {
-      id: 'f3',
-      author: 'Priya Sharma',
-      handle: '@priya.s',
-      content:
-        'Reminder that caregiver burnout is real. If you are exhausted, please reach out. This community is here for you.',
-      likes: 31,
-      comments: 9,
-    },
-  ],
-  Events: [
-    {
-      id: 'e1',
-      author: 'AlzApp Community',
-      handle: '@alzapp',
-      content:
-        '📅 Virtual Support Group — Every Tuesday at 7 PM EST. A safe space to share and listen. Zoom link in comments.',
-      likes: 12,
-      comments: 6,
-    },
-    {
-      id: 'e2',
-      author: 'AlzApp Community',
-      handle: '@alzapp',
-      content:
-        '🧠 Caregiver Wellness Workshop — July 30, 2026. Learn evidence-based strategies for managing stress. Free registration.',
-      likes: 24,
-      comments: 11,
-    },
-    {
-      id: 'e3',
-      author: 'AlzApp Community',
-      handle: '@alzapp',
-      content:
-        '🚶 Memory Walk Fundraiser — August 15, 2026. Join our team and help raise awareness. Every step counts.',
-      likes: 18,
-      comments: 7,
-    },
-  ],
-};
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -176,7 +47,7 @@ const HeartIcon: React.FC<{filled: boolean; size?: number}> = ({filled, size = 2
   </Svg>
 );
 
-const ShareIcon: React.FC<{size?: number}> = ({size = 20}) => (
+const ShareIcon: React.FC<{size?: number}> = ({size = 18}) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M16 8l-4-4-4 4M12 4v12"
@@ -188,16 +59,21 @@ const ShareIcon: React.FC<{size?: number}> = ({size = 20}) => (
   </Svg>
 );
 
+const PlusIcon: React.FC = () => (
+  <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
+    <Path d="M12 5v14M5 12h14" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round"/>
+  </Svg>
+);
+
 // ── Avatar ─────────────────────────────────────────────────────────────────────
 
 const Avatar: React.FC<{name: string}> = ({name}) => {
-  // Show initials for real users, person icon for @alzapp
   const initials = name
     .split(' ')
-    .map(w => w[0])
+    .map(w => w[0] ?? '')
     .join('')
     .slice(0, 2)
-    .toUpperCase();
+    .toUpperCase() || '?';
 
   return (
     <View style={s.avatar}>
@@ -209,100 +85,272 @@ const Avatar: React.FC<{name: string}> = ({name}) => {
 // ── Post card ──────────────────────────────────────────────────────────────────
 
 interface PostCardProps {
-  post: Post;
-  liked: boolean;
-  likeCount: number;
-  onLike: () => void;
-  onShare: () => void;
-  onComment: () => void;
+  post:    Post;
+  liked:   boolean;
+  onLike:  () => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({
-  post,
-  liked,
-  likeCount,
-  onLike,
-  onShare,
-  onComment,
-}) => (
+const PostCard: React.FC<PostCardProps> = ({post, liked, onLike}) => (
   <View style={s.card}>
-    {/* Header row */}
     <View style={s.cardHeader}>
-      <Avatar name={post.author} />
+      <Avatar name={post.authorName}/>
       <View style={s.authorInfo}>
-        <Text style={s.authorName}>{post.author}</Text>
-        <Text style={s.authorHandle}>{post.handle}</Text>
+        <Text style={s.authorName}>{post.authorName}</Text>
+        <Text style={s.authorHandle}>{post.authorHandle}</Text>
       </View>
-      <TouchableOpacity style={s.shareBtn} onPress={onShare} activeOpacity={0.7}>
-        <View style={s.shareBtnInner}>
-          <ShareIcon size={16} />
+      {post.tab === 'Events' && (
+        <View style={s.eventBadge}>
+          <Text style={s.eventBadgeText}>Event</Text>
         </View>
-      </TouchableOpacity>
+      )}
+      <View style={s.shareBtn}>
+        <View style={s.shareBtnInner}>
+          <ShareIcon size={15}/>
+        </View>
+      </View>
     </View>
 
-    {/* Content */}
     <Text style={s.content}>{post.content}</Text>
 
-    {/* Footer row */}
     <View style={s.cardFooter}>
       <TouchableOpacity style={s.likeRow} onPress={onLike} activeOpacity={0.7}>
-        <HeartIcon filled={liked} size={20} />
-        <Text style={[s.likeCount, liked && s.likeCountActive]}>{likeCount}</Text>
+        <HeartIcon filled={liked} size={20}/>
+        <Text style={[s.likeCount, liked && s.likeCountActive]}>
+          {post.likeCount}
+        </Text>
       </TouchableOpacity>
-      <TouchableOpacity onPress={onComment} activeOpacity={0.7}>
-        <Text style={s.commentCount}>{post.comments} Comments</Text>
-      </TouchableOpacity>
+      <Text style={s.commentCount}>{post.commentCount} Comments</Text>
     </View>
   </View>
 );
+
+// ── New-post modal ─────────────────────────────────────────────────────────────
+
+interface NewPostModalProps {
+  visible:    boolean;
+  authorName: string;
+  onClose:    () => void;
+  onPosted:   (tab: TabName) => void;
+}
+
+const NewPostModal: React.FC<NewPostModalProps> = ({
+  visible, authorName, onClose, onPosted,
+}) => {
+  const [content,  setContent]  = useState('');
+  const [tab,      setTab]      = useState<TabName>('Trending');
+  const [posting,  setPosting]  = useState(false);
+  const inputRef = useRef<TextInput>(null);
+
+  // Clear fields when modal opens
+  useEffect(() => {
+    if (visible) {
+      setContent('');
+      setTab('Trending');
+      setTimeout(() => inputRef.current?.focus(), 300);
+    }
+  }, [visible]);
+
+  const submit = async () => {
+    if (!content.trim()) {
+      Alert.alert('Empty post', 'Please write something before posting.');
+      return;
+    }
+    setPosting(true);
+    try {
+      await createPost(authorName, content, tab);
+      onPosted(tab);
+    } catch (err: any) {
+      const msg = err?.message ?? '';
+      if (msg.includes('400') || msg.includes('projectId')) {
+        Alert.alert(
+          'Firebase not configured',
+          'Open src/config/firebase.ts and paste your Firebase project config values.',
+        );
+      } else {
+        Alert.alert('Error', 'Could not post. Check your internet connection.');
+      }
+    } finally {
+      setPosting(false);
+    }
+  };
+
+  const TAB_OPTIONS: TabName[] = ['Trending', 'Following', 'Events'];
+
+  return (
+    <Modal visible={visible} transparent animationType="slide">
+      <KeyboardAvoidingView
+        style={s.modalOverlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={s.modalCard}>
+
+          {/* Header */}
+          <View style={s.modalHeader}>
+            <TouchableOpacity onPress={onClose} disabled={posting}>
+              <Text style={s.modalCancel}>Cancel</Text>
+            </TouchableOpacity>
+            <Text style={s.modalTitle}>New Post</Text>
+            <TouchableOpacity
+              style={[s.postBtn, posting && s.postBtnDisabled]}
+              onPress={submit}
+              disabled={posting || !content.trim()}>
+              {posting
+                ? <ActivityIndicator color="#fff" size="small"/>
+                : <Text style={s.postBtnText}>Post</Text>
+              }
+            </TouchableOpacity>
+          </View>
+
+          {/* Author preview */}
+          <View style={s.modalAuthorRow}>
+            <Avatar name={authorName}/>
+            <View>
+              <Text style={s.modalAuthorName}>{authorName}</Text>
+              <Text style={s.modalAuthorSub}>Sharing with the community</Text>
+            </View>
+          </View>
+
+          {/* Text input */}
+          <TextInput
+            ref={inputRef}
+            style={s.modalInput}
+            placeholder="What's on your mind?"
+            placeholderTextColor="#BBBBBB"
+            value={content}
+            onChangeText={setContent}
+            multiline
+            maxLength={1000}
+            textAlignVertical="top"
+          />
+
+          {/* Character counter */}
+          <Text style={s.charCount}>{content.length}/1000</Text>
+
+          {/* Tab selector */}
+          <Text style={s.tabSelectorLabel}>Post to:</Text>
+          <View style={s.tabSelector}>
+            {TAB_OPTIONS.map(t => (
+              <TouchableOpacity
+                key={t}
+                style={[s.tabOption, tab === t && s.tabOptionActive]}
+                onPress={() => setTab(t)}>
+                <Text style={[s.tabOptionText, tab === t && s.tabOptionTextActive]}>
+                  {t}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 
 const TABS: TabName[] = ['Trending', 'Following', 'Events'];
 
-const CommunityForumScreen: React.FC = ({navigation}: any) => {
-  const [activeTab, setActiveTab]   = useState<TabName>('Trending');
+const CommunityForumScreen: React.FC = () => {
+  const {user}              = useAuth();
+  const authorName          = user?.name ?? user?.email?.split('@')[0] ?? 'Anonymous';
 
-  // Increase header height via navigation options
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerStyle: {
-        backgroundColor: '#8B7EEE', // Matches your purple theme
-        height: 130,                // Increase this value to make it taller
+  const [activeTab,   setActiveTab]   = useState<TabName>('Trending');
+  const [posts,       setPosts]       = useState<Post[]>([]);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState<string | null>(null);
+  const [deviceId,    setDeviceId]    = useState('');
+  const [showNewPost, setShowNewPost] = useState(false);
+
+  // Load this device's unique ID
+  useEffect(() => {
+    getDeviceId().then(setDeviceId).catch(() => {});
+  }, []);
+
+  // Subscribe to posts — re-subscribes automatically when the tab changes
+  useEffect(() => {
+    setLoading(true);
+    setError(null);
+
+    const unsubscribe = subscribeToPosts(
+      activeTab,
+      newPosts => {
+        setPosts(newPosts);
+        setLoading(false);
       },
-      headerTitleStyle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#FFFFFF',
+      err => {
+        console.error('Firestore error:', err);
+        const msg = err.message ?? '';
+        if (
+          msg.includes('400') ||
+          msg.includes('projectId') ||
+          msg.includes('PASTE_')
+        ) {
+          setError(
+            'Firebase is not configured yet.\n\n' +
+            'Open src/config/firebase.ts and replace the placeholder values ' +
+            'with your Firebase project config.',
+          );
+        } else {
+          setError('Could not load posts. Check your internet connection.');
+        }
+        setLoading(false);
       },
-    });
-  }, [navigation]);
+    );
 
-  // Track liked state and live like counts separately
-  const [likedPosts, setLikedPosts]   = useState<Set<string>>(new Set());
-  const [likeCounts, setLikeCounts]   = useState<Record<string, number>>(() => {
-    const counts: Record<string, number> = {};
-    Object.values(MOCK_POSTS).flat().forEach(p => { counts[p.id] = p.likes; });
-    return counts;
-  });
+    // When the tab changes (or the component unmounts), stop the listener
+    return unsubscribe;
+  }, [activeTab]);
 
-  const handleLike = (postId: string) => {
-    setLikedPosts(prev => {
-      const next = new Set(prev);
-      const isLiked = next.has(postId);
-      if (isLiked) next.delete(postId);
-      else next.add(postId);
-      setLikeCounts(c => ({...c, [postId]: c[postId] + (isLiked ? -1 : 1)}));
-      return next;
-    });
+  // Optimistic like: update local state immediately, then tell Firestore.
+  // If Firestore fails, revert the change.
+  const handleLike = async (post: Post) => {
+    if (!deviceId) return;
+    const isLiked = post.likedBy.includes(deviceId);
+
+    // Immediate local update so the UI feels instant
+    setPosts(prev =>
+      prev.map(p => {
+        if (p.id !== post.id) return p;
+        return {
+          ...p,
+          likedBy:   isLiked
+            ? p.likedBy.filter(id => id !== deviceId)
+            : [...p.likedBy, deviceId],
+          likeCount: p.likeCount + (isLiked ? -1 : 1),
+        };
+      }),
+    );
+
+    try {
+      await toggleLike(post.id, isLiked);
+    } catch (_) {
+      // Revert on failure
+      setPosts(prev =>
+        prev.map(p => {
+          if (p.id !== post.id) return p;
+          return {
+            ...p,
+            likedBy:   isLiked
+              ? [...p.likedBy, deviceId]
+              : p.likedBy.filter(id => id !== deviceId),
+            likeCount: p.likeCount + (isLiked ? 1 : -1),
+          };
+        }),
+      );
+      Alert.alert('Error', 'Could not update like. Check your connection.');
+    }
   };
 
-  const posts = MOCK_POSTS[activeTab];
+  const handlePosted = (tab: TabName) => {
+    setShowNewPost(false);
+    setActiveTab(tab);
+  };
+
+  // ── Render ───────────────────────────────────────────────────────────────────
 
   return (
     <View style={s.screen}>
 
-      {/* ── Tab strip ── */}
+      {/* Tab strip */}
       <View style={s.tabStrip}>
         {TABS.map(tab => (
           <TouchableOpacity
@@ -313,32 +361,59 @@ const CommunityForumScreen: React.FC = ({navigation}: any) => {
             <Text style={[s.tabLabel, activeTab === tab && s.tabLabelActive]}>
               {tab}
             </Text>
-            {activeTab === tab && <View style={s.tabIndicator} />}
+            {activeTab === tab && <View style={s.tabIndicator}/>}
           </TouchableOpacity>
         ))}
       </View>
+      <View style={s.tabDivider}/>
 
-      {/* Hairline below tabs */}
-      <View style={s.tabDivider} />
+      {/* Content */}
+      {loading ? (
+        <View style={s.centred}>
+          <ActivityIndicator size="large" color="#8B7EEE"/>
+          <Text style={s.loadingText}>Loading posts…</Text>
+        </View>
+      ) : error ? (
+        <View style={s.centred}>
+          <Text style={s.errorText}>{error}</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={s.feed}
+          contentContainerStyle={s.feedContent}
+          showsVerticalScrollIndicator={false}>
+          {posts.length === 0 && (
+            <Text style={s.emptyText}>
+              No posts yet. Be the first to share something! 👆
+            </Text>
+          )}
+          {posts.map(post => (
+            <PostCard
+              key={post.id}
+              post={post}
+              liked={deviceId ? post.likedBy.includes(deviceId) : false}
+              onLike={() => handleLike(post)}
+            />
+          ))}
+          <View style={{height: 100}}/>
+        </ScrollView>
+      )}
 
-      {/* ── Post feed ── */}
-      <ScrollView
-        style={s.feed}
-        contentContainerStyle={s.feedContent}
-        showsVerticalScrollIndicator={false}>
-        {posts.map(post => (
-          <PostCard
-            key={post.id}
-            post={post}
-            liked={likedPosts.has(post.id)}
-            likeCount={likeCounts[post.id] ?? post.likes}
-            onLike={() => handleLike(post.id)}
-            onShare={() => {/* wire up share sheet later */}}
-            onComment={() => {/* wire up comment thread later */}}
-          />
-        ))}
-        <View style={{height: 20}} />
-      </ScrollView>
+      {/* Floating action button — opens new post modal */}
+      <TouchableOpacity
+        style={s.fab}
+        onPress={() => setShowNewPost(true)}
+        activeOpacity={0.85}>
+        <PlusIcon/>
+      </TouchableOpacity>
+
+      {/* New post modal */}
+      <NewPostModal
+        visible={showNewPost}
+        authorName={authorName}
+        onClose={() => setShowNewPost(false)}
+        onPosted={handlePosted}
+      />
     </View>
   );
 };
@@ -348,10 +423,7 @@ const CommunityForumScreen: React.FC = ({navigation}: any) => {
 const AVATAR_SIZE = 42;
 
 const s = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#F5F3FF',
-  },
+  screen: {flex: 1, backgroundColor: '#F5F3FF'},
 
   // Tab strip
   tabStrip: {
@@ -360,126 +432,123 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
   },
   tabItem: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 12,
-    position: 'relative',
+    flex: 1, alignItems: 'center', paddingVertical: 12, position: 'relative',
   },
-  tabLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#7E7E7E',
-  },
-  tabLabelActive: {
-    color: '#000000',
-    fontWeight: '700',
-  },
+  tabLabel: {fontSize: 14, fontWeight: '500', color: '#7E7E7E'},
+  tabLabelActive: {color: '#000000', fontWeight: '700'},
   tabIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    width: '60%',
-    height: 2,
-    backgroundColor: '#000000',
-    borderRadius: 1,
+    position: 'absolute', bottom: 0, width: '60%',
+    height: 2, backgroundColor: '#000000', borderRadius: 1,
   },
   tabDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(0,0,0,0.15)',
+    height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(0,0,0,0.15)',
   },
 
   // Feed
   feed: {flex: 1},
-  feedContent: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-  },
+  feedContent: {paddingHorizontal: 16, paddingTop: 14},
+
+  // States
+  centred: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24},
+  loadingText: {marginTop: 12, fontSize: 14, color: '#7E7E7E'},
+  errorText: {fontSize: 14, color: '#D87E7E', textAlign: 'center', lineHeight: 22},
+  emptyText: {textAlign: 'center', color: '#9E9E9E', fontSize: 14, marginTop: 40, lineHeight: 22},
 
   // Post card
   card: {
-    backgroundColor: '#E8E8E8',
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 12,
+    backgroundColor: '#E8E8E8', borderRadius: 14,
+    padding: 14, marginBottom: 12,
   },
   cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 10,
+    flexDirection: 'row', alignItems: 'center', marginBottom: 10,
   },
-
-  // Avatar
   avatar: {
-    width: AVATAR_SIZE,
-    height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2,
-    backgroundColor: '#9E9E9E',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 10,
+    width: AVATAR_SIZE, height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2, backgroundColor: '#9E9E9E',
+    alignItems: 'center', justifyContent: 'center', marginRight: 10,
   },
-  avatarText: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-
-  // Author
+  avatarText: {fontSize: 16, fontWeight: '700', color: '#FFFFFF'},
   authorInfo: {flex: 1},
-  authorName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: '#000000',
+  authorName: {fontSize: 14, fontWeight: '700', color: '#000000'},
+  authorHandle: {fontSize: 12, color: '#555555', marginTop: 1},
+  eventBadge: {
+    backgroundColor: '#8B7EEE', borderRadius: 8,
+    paddingHorizontal: 8, paddingVertical: 2, marginRight: 6,
   },
-  authorHandle: {
-    fontSize: 12,
-    fontWeight: '400',
-    color: '#555555',
-    marginTop: 1,
-  },
-
-  // Share button
-  shareBtn: {marginLeft: 8},
+  eventBadgeText: {fontSize: 10, fontWeight: '700', color: '#FFFFFF'},
+  shareBtn: {marginLeft: 4},
   shareBtnInner: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: '#9E9E9E',
-    alignItems: 'center',
-    justifyContent: 'center',
+    width: 30, height: 30, borderRadius: 15,
+    backgroundColor: '#9E9E9E', alignItems: 'center', justifyContent: 'center',
   },
-
-  // Content
-  content: {
-    fontSize: 13,
-    lineHeight: 20,
-    color: '#1A1A1A',
-    marginBottom: 12,
-  },
-
-  // Footer
+  content: {fontSize: 13, lineHeight: 20, color: '#1A1A1A', marginBottom: 12},
   cardFooter: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
-  likeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
+  likeRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
+  likeCount: {fontSize: 14, fontWeight: '600', color: '#7E7E7E'},
+  likeCountActive: {color: '#8B7EEE'},
+  commentCount: {fontSize: 13, fontWeight: '500', color: '#555555'},
+
+  // FAB
+  fab: {
+    position: 'absolute', bottom: 90, right: 20,
+    width: 56, height: 56, borderRadius: 28,
+    backgroundColor: '#8B7EEE',
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#000', shadowOffset: {width: 0, height: 4},
+    shadowOpacity: 0.25, shadowRadius: 8, elevation: 8,
   },
-  likeCount: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#7E7E7E',
+
+  // New post modal
+  modalOverlay: {
+    flex: 1, backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
   },
-  likeCountActive: {
-    color: '#8B7EEE',
+  modalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 20, borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: Platform.OS === 'ios' ? 36 : 20,
+    minHeight: 400,
   },
-  commentCount: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: '#555555',
+  modalHeader: {
+    flexDirection: 'row', alignItems: 'center',
+    justifyContent: 'space-between', marginBottom: 20,
   },
+  modalCancel: {fontSize: 15, color: '#7E7E7E'},
+  modalTitle: {fontSize: 17, fontWeight: '700', color: '#000000'},
+  postBtn: {
+    backgroundColor: '#8B7EEE', borderRadius: 20,
+    paddingHorizontal: 16, paddingVertical: 7,
+    minWidth: 56, alignItems: 'center',
+  },
+  postBtnDisabled: {opacity: 0.5},
+  postBtnText: {fontSize: 14, fontWeight: '700', color: '#FFFFFF'},
+  modalAuthorRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16,
+  },
+  modalAuthorName: {fontSize: 14, fontWeight: '700', color: '#000000'},
+  modalAuthorSub: {fontSize: 12, color: '#7E7E7E', marginTop: 2},
+  modalInput: {
+    fontSize: 15, color: '#000000', lineHeight: 22,
+    minHeight: 120, textAlignVertical: 'top',
+  },
+  charCount: {
+    textAlign: 'right', fontSize: 11, color: '#BBBBBB', marginTop: 6,
+  },
+  tabSelectorLabel: {
+    fontSize: 13, fontWeight: '600', color: '#555555',
+    marginTop: 16, marginBottom: 8,
+  },
+  tabSelector: {flexDirection: 'row', gap: 8},
+  tabOption: {
+    paddingHorizontal: 16, paddingVertical: 7,
+    borderRadius: 20, backgroundColor: '#F0F0F0',
+  },
+  tabOptionActive: {backgroundColor: '#8B7EEE'},
+  tabOptionText: {fontSize: 13, fontWeight: '500', color: '#555555'},
+  tabOptionTextActive: {color: '#FFFFFF', fontWeight: '700'},
 });
 
 export default CommunityForumScreen;

@@ -2,10 +2,20 @@
  * AppNavigator.tsx
  * Place at: src/navigation/AppNavigator.tsx
  *
- * All screens live inside ONE Tab.Navigator.
- * The custom tab bar skips any screen not in TAB_CONFIG,
- * so Mood is navigable but invisible in the tab bar.
- * No root Stack = no back button, no "MainTabs" label.
+ * Architecture:
+ *   Tab.Navigator (all main screens + hidden screens)
+ *   ├── Home       → HomeScreen (headerShown: false, custom header)
+ *   ├── Journal    → JournalScreen
+ *   ├── Community  → CommunityForumScreen
+ *   ├── Support    → ResourceLibraryScreen
+ *   ├── Messages   → MessagesNavigator (nested Stack for inbox → chat)
+ *   │   ├── Inbox  → PrivateMessagesScreen (headerShown: false)
+ *   │   └── Chat   → ChatScreen (headerShown: false)
+ *   └── Mood       → MoodScreen (hidden tab, headerShown: false)
+ *
+ * The custom tab bar skips any screen not in TAB_CONFIG (Mood).
+ * MessagesNavigator is a nested Stack so Chat gets proper back navigation
+ * while the bottom tab bar stays visible throughout.
  */
 
 import React from 'react';
@@ -16,14 +26,16 @@ import {
   StyleSheet,
   Platform,
 } from 'react-native';
-import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
-import type {BottomTabBarProps} from '@react-navigation/bottom-tabs';
+import {createBottomTabNavigator}  from '@react-navigation/bottom-tabs';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import type {BottomTabBarProps}    from '@react-navigation/bottom-tabs';
 
 import HomeScreen             from '../screens/HomeScreen';
 import JournalScreen          from '../screens/JournalScreen';
 import CommunityForumScreen   from '../screens/CommunityForumScreen';
 import ResourceLibraryScreen  from '../screens/ResourceLibraryScreen';
 import PrivateMessagesScreen  from '../screens/PrivateMessagesScreen';
+import ChatScreen             from '../screens/ChatScreen';
 import MoodScreen             from '../screens/MoodScreen';
 
 import {
@@ -34,9 +46,23 @@ import {
   MessagesIcon,
 } from '../components/icons/TabIcons';
 
-const Tab = createBottomTabNavigator();
+// ── Navigators ─────────────────────────────────────────────────────────────────
 
-// ── Tab bar config (only screens that appear in the bar) ───────────────────────
+const Tab      = createBottomTabNavigator();
+const MsgStack = createNativeStackNavigator();
+
+// Nested Stack inside the Messages tab — enables inbox → chat navigation
+// with proper back button and persistent tab bar.
+function MessagesNavigator() {
+  return (
+    <MsgStack.Navigator screenOptions={{headerShown: false}}>
+      <MsgStack.Screen name="Inbox" component={PrivateMessagesScreen}/>
+      <MsgStack.Screen name="Chat"  component={ChatScreen}/>
+    </MsgStack.Navigator>
+  );
+}
+
+// ── Tab bar config ─────────────────────────────────────────────────────────────
 
 const TAB_CONFIG = [
   {name: 'Home',      label: 'Home',      Icon: HomeIcon},
@@ -52,9 +78,8 @@ function CustomTabBar({state, navigation}: BottomTabBarProps) {
   return (
     <View style={tabStyles.container}>
       {state.routes.map((route, index) => {
-        // Any screen NOT in TAB_CONFIG (e.g. Mood) is silently skipped
         const config = TAB_CONFIG.find(c => c.name === route.name);
-        if (!config) return null;
+        if (!config) return null; // skips Mood (not in TAB_CONFIG)
 
         const isFocused = state.index === index;
         const color = isFocused ? '#000000' : '#7E7E7E';
@@ -66,9 +91,9 @@ function CustomTabBar({state, navigation}: BottomTabBarProps) {
             style={tabStyles.tab}
             activeOpacity={0.7}
             onPress={() => navigation.navigate(route.name)}>
-            <Icon color={color} size={22} />
+            <Icon color={color} size={22}/>
             <Text style={[tabStyles.label, {color}]}>{label}</Text>
-            {isFocused && <View style={tabStyles.indicator} />}
+            {isFocused && <View style={tabStyles.indicator}/>}
           </TouchableOpacity>
         );
       })}
@@ -90,16 +115,8 @@ const tabStyles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 8,
   },
-  tab: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 3,
-  },
-  label: {
-    fontSize: 10,
-    fontWeight: '700',
-    marginTop: 1,
-  },
+  tab:       {flex: 1, alignItems: 'center', gap: 3},
+  label:     {fontSize: 10, fontWeight: '700', marginTop: 1},
   indicator: {
     width: 16,
     height: 2,
@@ -109,15 +126,15 @@ const tabStyles = StyleSheet.create({
   },
 });
 
-// ── Navigator ──────────────────────────────────────────────────────────────────
+// ── Root navigator ─────────────────────────────────────────────────────────────
 
 export default function AppNavigator() {
   return (
     <Tab.Navigator
-      tabBar={(props: BottomTabBarProps) => <CustomTabBar {...props} />}
+      tabBar={(props: BottomTabBarProps) => <CustomTabBar {...props}/>}
       screenOptions={{
-        headerStyle: {backgroundColor: '#8B7EEE'},
-        headerTintColor: '#FFFFFF',
+        headerStyle:      {backgroundColor: '#8B7EEE'},
+        headerTintColor:  '#FFFFFF',
         headerTitleStyle: {fontWeight: 'bold', fontSize: 18},
       }}>
 
@@ -142,13 +159,14 @@ export default function AppNavigator() {
         component={ResourceLibraryScreen}
         options={{title: 'Support'}}
       />
+      {/* Messages tab uses a nested Stack for inbox → chat navigation */}
       <Tab.Screen
         name="Messages"
-        component={PrivateMessagesScreen}
-        options={{title: 'Messages'}}
+        component={MessagesNavigator}
+        options={{headerShown: false}}
       />
 
-      {/* ── Hidden tab (no entry in TAB_CONFIG, skipped by tab bar) ── */}
+      {/* ── Hidden tabs (not in TAB_CONFIG, skipped by tab bar) ── */}
       <Tab.Screen
         name="Mood"
         component={MoodScreen}
