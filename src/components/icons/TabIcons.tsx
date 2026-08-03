@@ -108,3 +108,18 @@ export const MoodChartIcon = ({color = '#FFFFFF', size = 44}: IconProps) => (
     />
   </Svg>
 );
+
+// ── Envelope Open — used by ThankYouNoteScreen, ChatScreen, ThankYouNoteOverlay ──
+// Exported here so no screen needs to import from another screen.
+
+export const EnvelopeOpenIcon = ({size = 40, color = '#8B7EEE'}: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+    {/* Envelope body */}
+    <Path
+      d="M6 20L24 8L42 20V40C42 41.1 41.1 42 40 42H8C6.9 42 6 41.1 6 40V20Z"
+      stroke={color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round"
+    />
+    {/* Open flap */}
+    <Path d="M6 20L24 30L42 20" stroke={color} strokeWidth={2.5} strokeLinecap="round"/>
+  </Svg>
+);

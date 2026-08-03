@@ -65,7 +65,7 @@ const GRID_ITEMS = [
   {screen: 'Journal',   label: 'My Journal',    Icon: JournalIcon},
   {screen: 'Community', label: 'Community',     Icon: CommunityIcon},
   {screen: 'Support',   label: 'Get Support',   Icon: SupportIcon},
-  {screen: 'Journal',   label: 'Gratitude',     Icon: null},   // SVG TBD
+  {screen: 'Gratitude', label: 'Gratitude',     Icon: null},   // SVG TBD
   {screen: 'Messages',  label: 'Messages',      Icon: MessagesIcon},
 ];
 
