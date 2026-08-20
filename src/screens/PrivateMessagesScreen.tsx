@@ -11,7 +11,7 @@
  *  - Loading / error states added below the filter pills
  */
 
-import React, {useState, useMemo, useEffect, useLayoutEffect} from 'react';
+import React, {useState, useMemo, useEffect} from 'react';
 import {
   View,
   Text,
@@ -29,6 +29,7 @@ import {
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
 import {useAuth} from '../context/AuthContext';
+import {ensureKeyPair} from '../services/e2eService';
 import {
   subscribeToConversations,
   getOrCreateConversation,
@@ -325,6 +326,12 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const [activeFilter, setFilter]  = useState<FilterType>('All');
 
   // Subscribe to real-time conversations from Firestore
+  // Make sure this device has an E2E keypair and that its public key is
+  // published, so other users can send this user encrypted messages.
+  useEffect(() => {
+    if (user) ensureKeyPair(user.uid).catch(() => {});
+  }, [user?.uid]);
+
   useEffect(() => {
     if (!user) return;
     setLoading(true);
@@ -381,37 +388,24 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
     });
   };
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: true,
-      title: 'Messages',
-      headerStyle: {
-        backgroundColor: '#8B7EEE',
-        height: 130,
-        elevation: 0,
-        shadowOpacity: 0,
-      },
-      headerTintColor: '#FFFFFF',
-      headerTitleStyle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#FFFFFF',
-      },
-      headerTitleAlign: 'center',
-      headerRight: () => (
-        <TouchableOpacity
-          style={s.composeBtn}
-          onPress={() => setShowCompose(true)}
-          activeOpacity={0.7}>
-          <ComposeIcon/>
-        </TouchableOpacity>
-      ),
-    });
-  }, [navigation]);
-
   return (
     <View style={s.screen}>
       <StatusBar barStyle="light-content" backgroundColor="#8B7EEE" />
+
+      {/* ── Custom Purple Header — your original, with compose button added ── */}
+      <View style={s.customHeader}>
+        <View style={s.headerRow}>
+          {/* Invisible spacer keeps title perfectly centred */}
+          <View style={s.headerSpacer}/>
+          <Text style={s.headerTitle}>Messages</Text>
+          <TouchableOpacity
+            style={s.composeBtn}
+            onPress={() => setShowCompose(true)}
+            activeOpacity={0.7}>
+            <ComposeIcon/>
+          </TouchableOpacity>
+        </View>
+      </View>
 
       <ScrollView
         style={s.scroll}

@@ -6,7 +6,7 @@
  * the recipient's Private Messages inbox as a special Thank You Note bubble.
  */
 
-import React, {useState} from 'react';
+import React, {useState, useMemo} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, SafeAreaView, StatusBar, KeyboardAvoidingView,
@@ -16,6 +16,8 @@ import Svg, {Path} from 'react-native-svg';
 import {EnvelopeOpenIcon} from '../components/icons/TabIcons';
 import {useAuth} from '../context/AuthContext';
 import {getOrCreateConversation, sendMessage} from '../services/messagingService';
+import {detectPHI, redactPHI} from '../services/phiDetection';
+import PHIWarningBanner from '../components/PHIWarningBanner';
 
 const {width: SW} = Dimensions.get('window');
 
@@ -53,6 +55,18 @@ const ThankYouNoteScreen: React.FC<{route: any; navigation: any}> = ({route, nav
   ];
 
   const [message, setMessage] = useState('');
+  const [phiDismissed, setPhiDismissed] = useState(false);
+
+  // PHI detection on the note text
+  const phiMatches = useMemo(() => {
+    if (phiDismissed || message.length < 4) return [];
+    return detectPHI(message);
+  }, [message, phiDismissed]);
+
+  const handleRedact = () => {
+    setMessage(prev => redactPHI(prev));
+    setPhiDismissed(true);
+  };
   const [sending, setSending] = useState(false);
   const [sent,    setSent]    = useState(false);
 
@@ -127,6 +141,19 @@ const ThankYouNoteScreen: React.FC<{route: any; navigation: any}> = ({route, nav
 
           {/* Date */}
           <Text style={s.dateSep}>Today</Text>
+
+          {/* PHI privacy nudge */}
+          <PHIWarningBanner
+            matches={phiMatches}
+            onRedact={handleRedact}
+            onDismiss={() => setPhiDismissed(true)}
+            variant="warn"
+          />
+
+          {/* Encryption notice */}
+          <Text style={s.encNotice}>
+            🔒 End-to-end encrypted — only you and {firstName} can read this
+          </Text>
 
           {/* Letter card + side options */}
           <View style={s.cardRow}>
@@ -229,6 +256,7 @@ const s = StyleSheet.create({
   scrollContent: {paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8},
 
   dateSep: {textAlign: 'center', fontSize: 12, color: '#9E9E9E', marginBottom: 14},
+  encNotice: {textAlign: 'center', fontSize: 11, color: '#8B7EEE', fontWeight: '600', marginBottom: 12},
 
   // Card + side panel row
   cardRow: {flexDirection: 'row', gap: 10, marginBottom: 14},

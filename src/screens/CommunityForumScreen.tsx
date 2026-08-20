@@ -6,7 +6,7 @@
  * Posts are real — everyone on the same Firebase project sees them instantly.
  */
 
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useMemo} from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,8 @@ import {
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
 import {useAuth} from '../context/AuthContext';
+import {detectPHI, redactPHI} from '../services/phiDetection';
+import PHIWarningBanner from '../components/PHIWarningBanner';
 import {
   subscribeToPosts,
   createPost,
@@ -139,6 +141,16 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
   const [content,  setContent]  = useState('');
   const [tab,      setTab]      = useState<TabName>('Trending');
   const [posting,  setPosting]  = useState(false);
+
+  // Community posts are PUBLIC and cannot be encrypted.
+  // PHI here is BLOCKING, not advisory.
+  const phiMatches = useMemo(
+    () => (content.length < 4 ? [] : detectPHI(content)),
+    [content],
+  );
+  const hasPHI = phiMatches.length > 0;
+
+  const handleRedact = () => setContent(prev => redactPHI(prev));
   const inputRef = useRef<TextInput>(null);
 
   // Clear fields when modal opens
@@ -153,6 +165,14 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
   const submit = async () => {
     if (!content.trim()) {
       Alert.alert('Empty post', 'Please write something before posting.');
+      return;
+    }
+    if (hasPHI) {
+      Alert.alert(
+        'Private information detected',
+        'Community posts are visible to every user and cannot be encrypted. '
+        + 'Please remove names, phone numbers, and other identifying details first.',
+      );
       return;
     }
     setPosting(true);
@@ -190,9 +210,9 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
             </TouchableOpacity>
             <Text style={s.modalTitle}>New Post</Text>
             <TouchableOpacity
-              style={[s.postBtn, posting && s.postBtnDisabled]}
+              style={[s.postBtn, (posting || hasPHI) && s.postBtnDisabled]}
               onPress={submit}
-              disabled={posting || !content.trim()}>
+              disabled={posting || !content.trim() || hasPHI}>
               {posting
                 ? <ActivityIndicator color="#fff" size="small"/>
                 : <Text style={s.postBtnText}>Post</Text>
@@ -207,6 +227,20 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
               <Text style={s.modalAuthorName}>{authorName}</Text>
               <Text style={s.modalAuthorSub}>Sharing with the community</Text>
             </View>
+          </View>
+
+          {/* PUBLIC POST WARNING — blocking variant */}
+          <PHIWarningBanner
+            matches={phiMatches}
+            onRedact={handleRedact}
+            variant="block"
+          />
+
+          {/* Public visibility notice */}
+          <View style={s.publicNotice}>
+            <Text style={s.publicNoticeText}>
+              🌐 Public post — visible to all AlzApp users. Never include patient names or details.
+            </Text>
           </View>
 
           {/* Text input */}
@@ -537,6 +571,11 @@ const s = StyleSheet.create({
   charCount: {
     textAlign: 'right', fontSize: 11, color: '#BBBBBB', marginTop: 6,
   },
+  publicNotice: {
+    backgroundColor: '#EEF4FD', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 9, marginBottom: 12,
+  },
+  publicNoticeText: {fontSize: 11, color: '#2C5A8F', lineHeight: 16},
   tabSelectorLabel: {
     fontSize: 13, fontWeight: '600', color: '#555555',
     marginTop: 16, marginBottom: 8,

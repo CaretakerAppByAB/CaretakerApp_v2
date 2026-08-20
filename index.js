@@ -2,6 +2,7 @@
  * IMPORTANT: 'react-native-gesture-handler' MUST be the very first import.
  * This is required for the drawer navigator's swipe gesture to work on iOS.
  */
+import 'react-native-get-random-values';
 import 'react-native-gesture-handler';
 
 import {AppRegistry} from 'react-native';

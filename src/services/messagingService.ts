@@ -1,6 +1,10 @@
 /**
  * src/services/messagingService.ts
- * Updated: added messageType support for Thank You Notes.
+ *
+ * PHI PROTECTION:
+ * Message bodies and inbox previews are end-to-end encrypted with NaCl box
+ * (see e2eService.ts). Firestore stores only ciphertext. Neither Google nor
+ * your team can read message contents.
  */
 
 import {
@@ -10,6 +14,7 @@ import {
 } from 'firebase/firestore';
 import {db} from '../config/firebase';
 import {UserProfile} from '../context/AuthContext';
+import {encryptForUser, decryptFromUser, ensureKeyPair} from './e2eService';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -19,20 +24,21 @@ export interface Message {
   id:           string;
   senderId:     string;
   senderName:   string;
-  text:         string;
+  text:         string;        // decrypted in memory
   createdAt:    number;
   messageType?: MessageType;
+  wasEncrypted?: boolean;
 }
 
 export interface ConversationSummary {
   id:            string;
   otherUser:     {uid: string; name: string; handle: string};
-  lastMessage:   string;
+  lastMessage:   string;       // decrypted in memory
   lastMessageAt: number;
   unread:        number;
 }
 
-// ── Device / user helpers ──────────────────────────────────────────────────────
+// ── User lookup ────────────────────────────────────────────────────────────────
 
 export const findUserByEmail = async (email: string): Promise<UserProfile | null> => {
   const snap = await getDocs(
@@ -48,6 +54,9 @@ export const getOrCreateConversation = async (
   currentUser: UserProfile,
   otherUser:   UserProfile,
 ): Promise<string> => {
+  // Make sure this device has a keypair before any messaging happens
+  await ensureKeyPair(currentUser.uid);
+
   const id   = [currentUser.uid, otherUser.uid].sort().join('_');
   const ref  = doc(db, 'conversations', id);
   const snap = await getDoc(ref);
@@ -61,14 +70,14 @@ export const getOrCreateConversation = async (
       },
       lastMessage:   '',
       lastMessageAt: Date.now(),
-      unreadCounts: {[currentUser.uid]: 0, [otherUser.uid]: 0},
-      createdAt: Date.now(),
+      unreadCounts:  {[currentUser.uid]: 0, [otherUser.uid]: 0},
+      createdAt:     Date.now(),
     });
   }
   return id;
 };
 
-// ── Real-time subscriptions ────────────────────────────────────────────────────
+// ── Inbox subscription (decrypts previews) ─────────────────────────────────────
 
 export const subscribeToConversations = (
   userId:   string,
@@ -79,43 +88,88 @@ export const subscribeToConversations = (
     collection(db, 'conversations'),
     where('participants', 'array-contains', userId),
   );
-  return onSnapshot(q, snapshot => {
-    const convs = snapshot.docs
-      .map(d => {
-        const data     = d.data();
-        const otherUid = (data.participants as string[]).find(p => p !== userId) ?? '';
-        const other    = data.participantData?.[otherUid] ?? {name: 'Unknown', handle: '@unknown'};
-        return {
-          id:            d.id,
-          otherUser:     {uid: otherUid, name: other.name, handle: other.handle},
-          lastMessage:   data.lastMessage ?? '',
-          lastMessageAt: data.lastMessageAt ?? 0,
-          unread:        data.unreadCounts?.[userId] ?? 0,
-        } as ConversationSummary;
-      })
-      .filter(c => c.lastMessage !== '')
-      .sort((a, b) => b.lastMessageAt - a.lastMessageAt);
-    onUpdate(convs);
-  }, onError);
+
+  return onSnapshot(
+    q,
+    async snapshot => {
+      try {
+        const convs = await Promise.all(
+          snapshot.docs.map(async d => {
+            const data     = d.data();
+            const otherUid = (data.participants as string[]).find(p => p !== userId) ?? '';
+            const other    = data.participantData?.[otherUid] ?? {name: 'Unknown', handle: '@unknown'};
+
+            // Decrypt the inbox preview
+            const lastMessage = await decryptFromUser(
+              data.lastMessage ?? '', userId, otherUid,
+            );
+
+            return {
+              id:            d.id,
+              otherUser:     {uid: otherUid, name: other.name, handle: other.handle},
+              lastMessage,
+              lastMessageAt: data.lastMessageAt ?? 0,
+              unread:        data.unreadCounts?.[userId] ?? 0,
+            } as ConversationSummary;
+          }),
+        );
+
+        onUpdate(
+          convs
+            .filter(c => c.lastMessage !== '')
+            .sort((a, b) => b.lastMessageAt - a.lastMessageAt),
+        );
+      } catch (err: any) {
+        onError(err);
+      }
+    },
+    onError,
+  );
 };
+
+// ── Message subscription (decrypts bodies) ─────────────────────────────────────
 
 export const subscribeToMessages = (
   conversationId: string,
-  onUpdate: (msgs: Message[]) => void,
-  onError:  (err: Error) => void,
+  myUserId:       string,
+  otherUserId:    string,
+  onUpdate:       (msgs: Message[]) => void,
+  onError:        (err: Error) => void,
 ): (() => void) => {
   const q = query(
     collection(db, 'conversations', conversationId, 'messages'),
     orderBy('createdAt', 'asc'),
   );
-  return onSnapshot(q, snapshot => {
-    const msgs = snapshot.docs.map(d => ({id: d.id, ...d.data()})) as Message[];
-    onUpdate(msgs);
-  }, onError);
+
+  return onSnapshot(
+    q,
+    async snapshot => {
+      try {
+        const msgs = await Promise.all(
+          snapshot.docs.map(async d => {
+            const data = d.data();
+            const text = await decryptFromUser(data.text ?? '', myUserId, otherUserId);
+            return {
+              id:           d.id,
+              senderId:     data.senderId,
+              senderName:   data.senderName,
+              text,
+              createdAt:    data.createdAt ?? 0,
+              messageType:  data.messageType ?? 'text',
+              wasEncrypted: data.encrypted ?? false,
+            } as Message;
+          }),
+        );
+        onUpdate(msgs);
+      } catch (err: any) {
+        onError(err);
+      }
+    },
+    onError,
+  );
 };
 
-// ── Send message ───────────────────────────────────────────────────────────────
-// messageType defaults to 'text'. Pass 'thankYouNote' for gratitude cards.
+// ── Send ───────────────────────────────────────────────────────────────────────
 
 export const sendMessage = async (
   conversationId: string,
@@ -127,25 +181,35 @@ export const sendMessage = async (
 ): Promise<void> => {
   const now = Date.now();
 
+  // Encrypt the body for the recipient (readable by both parties only)
+  const {ciphertext, encrypted} = await encryptForUser(text.trim(), senderId, receiverId);
+
   await addDoc(collection(db, 'conversations', conversationId, 'messages'), {
     senderId,
     senderName,
-    text:        text.trim(),
+    text:        ciphertext,
+    encrypted,
     messageType,
     createdAt:   now,
     timestamp:   serverTimestamp(),
   });
 
-  // Thank You Notes show a friendly label in the inbox preview
-  const preview = messageType === 'thankYouNote' ? '💜 Thank You Note' : text.trim();
+  // Encrypt the inbox preview too — otherwise message content leaks into
+  // the conversation document in plaintext.
+  const previewPlain = messageType === 'thankYouNote'
+    ? 'Thank You Note'
+    : text.trim();
+  const {ciphertext: encPreview} = await encryptForUser(previewPlain, senderId, receiverId);
 
   await updateDoc(doc(db, 'conversations', conversationId), {
-    lastMessage:                   preview,
-    lastMessageAt:                 now,
+    lastMessage:                    encPreview,
+    lastMessageAt:                  now,
     [`unreadCounts.${receiverId}`]: increment(1),
     [`unreadCounts.${senderId}`]:   0,
   });
 };
+
+// ── Read receipts ──────────────────────────────────────────────────────────────
 
 export const markConversationRead = async (
   conversationId: string,

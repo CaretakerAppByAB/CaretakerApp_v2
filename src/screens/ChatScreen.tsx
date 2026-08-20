@@ -1,13 +1,11 @@
 /**
- * ChatScreen.tsx
- * Place at: src/screens/ChatScreen.tsx
+ * src/screens/ChatScreen.tsx
  *
- * Updated: shows ThankYouNoteOverlay when the recipient opens a chat
- * containing an unseen Thank You Note. Overlay is shown exactly once
- * per note (tracked in AsyncStorage).
+ * Messages are end-to-end encrypted (see e2eService.ts).
+ * A PHI warning appears before sending if identifiers are detected.
  */
 
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useMemo} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, SafeAreaView, StatusBar, KeyboardAvoidingView,
@@ -18,6 +16,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useAuth} from '../context/AuthContext';
 import {EnvelopeOpenIcon} from '../components/icons/TabIcons';
 import ThankYouNoteOverlay from '../components/ThankYouNoteOverlay';
+import PHIWarningBanner from '../components/PHIWarningBanner';
+import {detectPHI, redactPHI} from '../services/phiDetection';
 import {
   subscribeToMessages, sendMessage, markConversationRead, Message,
 } from '../services/messagingService';
@@ -39,31 +39,32 @@ const InfoIcon = () => (
 
 const SendIcon = ({active}: {active: boolean}) => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
-      stroke={active ? '#8B7EEE' : '#BBBBBB'}
-      strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"
-    />
+    <Path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
+      stroke={active ? '#8B7EEE' : '#BBBBBB'} strokeWidth={1.8}
+      strokeLinecap="round" strokeLinejoin="round"/>
   </Svg>
 );
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+const LockIcon = () => (
+  <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
+    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke="#8B7EEE" strokeWidth={2}/>
+    <Path d="M7 11V7a5 5 0 0110 0v4" stroke="#8B7EEE" strokeWidth={2} strokeLinecap="round"/>
+  </Svg>
+);
 
 const formatTime = (ms: number) =>
   new Date(ms).toLocaleTimeString([], {hour: 'numeric', minute: '2-digit'});
 
 const SEEN_KEY = (noteId: string) => `@alz_note_seen_${noteId}`;
 
-// ── Thank You Note bubble (in the chat thread) ─────────────────────────────────
+// ── Thank You Note bubble ──────────────────────────────────────────────────────
 
 const ThankYouNoteBubble: React.FC<{msg: Message; isMine: boolean}> = ({msg, isMine}) => (
   <View style={[s.bubbleWrap, isMine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
     <View style={s.thankYouCard}>
       <EnvelopeOpenIcon size={52} color="#A18CE6"/>
       <Text style={s.thankYouLabel}>Thank You Note</Text>
-      {!!msg.text && (
-        <Text style={s.thankYouPreview} numberOfLines={2}>{msg.text}</Text>
-      )}
+      {!!msg.text && <Text style={s.thankYouPreview} numberOfLines={2}>{msg.text}</Text>}
     </View>
     <View style={[s.meta, isMine && s.metaMine]}>
       <Text style={s.metaTime}>{formatTime(msg.createdAt)}</Text>
@@ -74,20 +75,13 @@ const ThankYouNoteBubble: React.FC<{msg: Message; isMine: boolean}> = ({msg, isM
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 
-interface PendingNote {
-  noteId:     string;
-  message:    string;
-  senderName: string;
-}
+interface PendingNote {noteId: string; message: string; senderName: string}
 
 const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}) => {
   const {user} = useAuth();
   const {
-    conversationId = '',
-    name           = 'Chat',
-    initials       = '?',
-    receiverId     = '',
-    online         = false,
+    conversationId = '', name = 'Chat', initials = '?',
+    receiverId = '', online = false,
   } = route?.params ?? {};
 
   const [messages,     setMessages]     = useState<Message[]>([]);
@@ -95,58 +89,63 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
   const [loading,      setLoading]      = useState(true);
   const [sending,      setSending]      = useState(false);
   const [pendingNote,  setPendingNote]  = useState<PendingNote | null>(null);
+  const [phiDismissed, setPhiDismissed] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
 
-  // Mark conversation as read when opened
+  // ── PHI detection on the draft message ──────────────────────────────────────
+  const phiMatches = useMemo(() => {
+    if (phiDismissed || inputText.length < 4) return [];
+    return detectPHI(inputText);
+  }, [inputText, phiDismissed]);
+
+  const handleRedact = () => {
+    setInputText(prev => redactPHI(prev));
+    setPhiDismissed(true);
+  };
+
+  // ── Mark read ───────────────────────────────────────────────────────────────
   useEffect(() => {
     if (user && conversationId) {
       markConversationRead(conversationId, user.uid).catch(() => {});
     }
   }, [conversationId, user?.uid]);
 
-  // Subscribe to real-time messages
+  // ── Subscribe (decrypts via e2eService) ─────────────────────────────────────
   useEffect(() => {
-    if (!conversationId) return;
+    if (!conversationId || !user || !receiverId) return;
     const unsub = subscribeToMessages(
       conversationId,
+      user.uid,
+      receiverId,
       msgs => { setMessages(msgs); setLoading(false); },
       ()   => { setLoading(false); },
     );
     return unsub;
-  }, [conversationId]);
+  }, [conversationId, user?.uid, receiverId]);
 
-  // Scroll to bottom on new messages
   useEffect(() => {
     const t = setTimeout(() => scrollRef.current?.scrollToEnd({animated: true}), 80);
     return () => clearTimeout(t);
   }, [messages]);
 
-  // Check for an unseen Thank You Note when messages load/change
+  // ── Thank You Note overlay ──────────────────────────────────────────────────
   useEffect(() => {
     if (!user || messages.length === 0) return;
-
-    // Find the most recent thankYouNote sent by the OTHER person
-    const latestNote = [...messages]
-      .reverse()
+    const latestNote = [...messages].reverse()
       .find(m => m.messageType === 'thankYouNote' && m.senderId !== user.uid);
-
     if (!latestNote) return;
 
     AsyncStorage.getItem(SEEN_KEY(latestNote.id))
       .then(seen => {
         if (!seen) {
-          // Small delay so the chat renders first, then overlay appears
-          setTimeout(() => {
-            setPendingNote({
-              noteId:     latestNote.id,
-              message:    latestNote.text,
-              senderName: latestNote.senderName,
-            });
-          }, 500);
+          setTimeout(() => setPendingNote({
+            noteId: latestNote.id,
+            message: latestNote.text,
+            senderName: latestNote.senderName,
+          }), 500);
         }
       })
       .catch(() => {});
-    // Only re-run when the message count changes, not on every render
   }, [messages.length, user?.uid]);
 
   const handleCloseNote = async () => {
@@ -156,11 +155,13 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
     setPendingNote(null);
   };
 
+  // ── Send ────────────────────────────────────────────────────────────────────
   const handleSend = async () => {
     const text = inputText.trim();
     if (!text || !user || sending) return;
     setSending(true);
     setInputText('');
+    setPhiDismissed(false);
     try {
       await sendMessage(conversationId, user.uid, user.name, receiverId, text);
     } catch {
@@ -174,7 +175,6 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
     <SafeAreaView style={s.safe}>
       <StatusBar barStyle="dark-content" backgroundColor="#fff"/>
 
-      {/* ── Animated Thank You Note overlay ── */}
       <ThankYouNoteOverlay
         visible={!!pendingNote}
         message={pendingNote?.message ?? ''}
@@ -182,27 +182,23 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
         onClose={handleCloseNote}
       />
 
-      {/* ── Header ── */}
+      {/* Header */}
       <View style={s.header}>
         <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
           <BackArrow/>
         </TouchableOpacity>
-        <View style={s.avatarCircle}>
-          <Text style={s.avatarText}>{initials}</Text>
-        </View>
+        <View style={s.avatarCircle}><Text style={s.avatarText}>{initials}</Text></View>
         <View style={s.headerInfo}>
           <Text style={s.headerName} numberOfLines={1}>{name}</Text>
-          {online && (
-            <View style={s.onlineRow}>
-              <View style={s.onlineDot}/><Text style={s.onlineText}>Online</Text>
-            </View>
-          )}
+          <View style={s.encRow}>
+            <LockIcon/>
+            <Text style={s.encText}>End-to-end encrypted</Text>
+          </View>
         </View>
         <TouchableOpacity style={s.infoBtn} activeOpacity={0.7}><InfoIcon/></TouchableOpacity>
       </View>
       <View style={s.divider}/>
 
-      {/* ── Messages + input ── */}
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           ref={scrollRef}
@@ -212,19 +208,16 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
 
           <View style={s.dateSep}><Text style={s.dateSepText}>Today</Text></View>
 
-          {loading && <ActivityIndicator color="#8B7EEE" style={{marginTop: 20}}/>}
-
+          {loading && <ActivityIndicator color="#8B7EEE" style={{marginTop:20}}/>}
           {!loading && messages.length === 0 && (
             <Text style={s.empty}>Send a message to start the conversation.</Text>
           )}
 
           {messages.map(msg => {
             const isMine = msg.senderId === user?.uid;
-
             if (msg.messageType === 'thankYouNote') {
               return <ThankYouNoteBubble key={msg.id} msg={msg} isMine={isMine}/>;
             }
-
             return (
               <View key={msg.id} style={[s.bubbleWrap, isMine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
                 <View style={[s.bubble, isMine ? s.bubbleMine : s.bubbleTheirs]}>
@@ -241,6 +234,18 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
           })}
         </ScrollView>
 
+        {/* PHI warning above the input */}
+        {phiMatches.length > 0 && (
+          <View style={{paddingHorizontal: 12}}>
+            <PHIWarningBanner
+              matches={phiMatches}
+              onRedact={handleRedact}
+              onDismiss={() => setPhiDismissed(true)}
+              variant="warn"
+            />
+          </View>
+        )}
+
         {/* Input bar */}
         <View style={s.inputBar}>
           <TouchableOpacity style={s.addBtn} activeOpacity={0.7}>
@@ -252,7 +257,10 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
               placeholder="Type a message..."
               placeholderTextColor="#9E9E9E"
               value={inputText}
-              onChangeText={setInputText}
+              onChangeText={t => {
+                setInputText(t);
+                if (phiDismissed && t.length < 4) setPhiDismissed(false);
+              }}
               multiline
               maxLength={1000}
             />
@@ -279,17 +287,16 @@ const s = StyleSheet.create({
   safe: {flex:1, backgroundColor:'#fff'},
   flex: {flex:1},
 
-  header:        {flexDirection:'row', alignItems:'center', paddingHorizontal:12, paddingVertical:10, backgroundColor:'#fff', gap:10},
-  backBtn:       {padding:6},
-  avatarCircle:  {width:42, height:42, borderRadius:21, backgroundColor:'#9E9E9E', alignItems:'center', justifyContent:'center'},
-  avatarText:    {fontSize:15, fontWeight:'700', color:'#fff'},
-  headerInfo:    {flex:1},
-  headerName:    {fontSize:15, fontWeight:'700', color:'#000'},
-  onlineRow:     {flexDirection:'row', alignItems:'center', gap:5, marginTop:2},
-  onlineDot:     {width:8, height:8, borderRadius:4, backgroundColor:'#2ECC71'},
-  onlineText:    {fontSize:12, fontWeight:'500', color:'#2ECC71'},
-  infoBtn:       {padding:6},
-  divider:       {height:StyleSheet.hairlineWidth, backgroundColor:'rgba(0,0,0,0.12)'},
+  header:       {flexDirection:'row', alignItems:'center', paddingHorizontal:12, paddingVertical:10, backgroundColor:'#fff', gap:10},
+  backBtn:      {padding:6},
+  avatarCircle: {width:42, height:42, borderRadius:21, backgroundColor:'#9E9E9E', alignItems:'center', justifyContent:'center'},
+  avatarText:   {fontSize:15, fontWeight:'700', color:'#fff'},
+  headerInfo:   {flex:1},
+  headerName:   {fontSize:15, fontWeight:'700', color:'#000'},
+  encRow:       {flexDirection:'row', alignItems:'center', gap:4, marginTop:2},
+  encText:      {fontSize:10, color:'#8B7EEE', fontWeight:'600'},
+  infoBtn:      {padding:6},
+  divider:      {height:StyleSheet.hairlineWidth, backgroundColor:'rgba(0,0,0,0.12)'},
 
   msgList:    {flex:1, backgroundColor:'#fff'},
   msgContent: {padding:16, paddingBottom:12},
@@ -297,7 +304,6 @@ const s = StyleSheet.create({
   dateSepText:{fontSize:12, color:'#9E9E9E', fontWeight:'500'},
   empty:      {textAlign:'center', color:'#BBBBBB', fontSize:14, marginTop:40},
 
-  // Regular bubble
   bubbleWrap:       {marginBottom:14, maxWidth:'72%'},
   bubbleWrapMine:   {alignSelf:'flex-end',  alignItems:'flex-end'},
   bubbleWrapTheirs: {alignSelf:'flex-start', alignItems:'flex-start'},
@@ -308,13 +314,8 @@ const s = StyleSheet.create({
   bubbleTextMine:   {color:'#fff'},
   bubbleTextTheirs: {color:'#000'},
 
-  // Thank You Note card in thread
-  thankYouCard: {
-    backgroundColor: '#000000',
-    borderRadius:    18, borderTopRightRadius:4,
-    padding:         20, alignItems:'center', width:190,
-  },
-  thankYouLabel:   {color:'#FFFFFF', fontSize:14, fontWeight:'700', marginTop:10},
+  thankYouCard:    {backgroundColor:'#000', borderRadius:18, borderTopRightRadius:4, padding:20, alignItems:'center', width:190},
+  thankYouLabel:   {color:'#fff', fontSize:14, fontWeight:'700', marginTop:10},
   thankYouPreview: {color:'rgba(255,255,255,0.65)', fontSize:12, marginTop:4, textAlign:'center'},
 
   meta:     {flexDirection:'row', alignItems:'center', gap:4, marginTop:4, marginHorizontal:2},
