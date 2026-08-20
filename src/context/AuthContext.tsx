@@ -1,12 +1,10 @@
 /**
- * src/context/AuthContext.tsx  — complete rewrite with Firebase Auth
- *
- * Replace your existing file with this one.
- * The public API (useAuth, AuthProvider) is unchanged so no other
- * files need updating EXCEPT App.tsx (see App.tsx in this set).
+ * src/context/AuthContext.tsx
+ * Updated: UserProfile now includes profile fields + profileComplete.
+ * Added refreshUser() so ProfileSetupScreen can reload state after setup.
  */
 
-import React, {createContext, useContext, useState, useEffect} from 'react';
+import React, {createContext, useContext, useState, useEffect, useCallback} from 'react';
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -19,19 +17,45 @@ import {auth, db} from '../config/firebase';
 // ── Types ──────────────────────────────────────────────────────────────────────
 
 export interface UserProfile {
-  uid:    string;
-  name:   string;
-  email:  string;
-  handle: string;
+  uid:                  string;
+  name:                 string;
+  email:                string;
+  handle:               string;
+  pronouns:             string;
+  age:                  string;
+  profilePhotoURL:      string;
+  coverPhotoURL:        string;
+  goals:                string[];
+  responsibilities:     string[];
+  notificationsEnabled: boolean;
+  profileComplete:      boolean;
 }
 
 interface AuthContextType {
-  user:      UserProfile | null;
-  isLoading: boolean;
-  login:     (email: string, password: string) => Promise<void>;
-  register:  (name: string, email: string, password: string) => Promise<void>;
-  logout:    () => Promise<void>;
+  user:         UserProfile | null;
+  isLoading:    boolean;
+  login:        (email: string, password: string) => Promise<void>;
+  register:     (name: string, email: string, password: string) => Promise<void>;
+  logout:       () => Promise<void>;
+  refreshUser:  () => Promise<void>;
 }
+
+// ── Default profile shape ──────────────────────────────────────────────────────
+
+const defaultProfile = (uid: string, name: string, email: string): UserProfile => ({
+  uid,
+  name,
+  email,
+  handle:               '@' + name.toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '') || 'user',
+  pronouns:             '',
+  age:                  '',
+  profilePhotoURL:      '',
+  coverPhotoURL:        '',
+  goals:                [],
+  responsibilities:     [],
+  notificationsEnabled: false,
+  profileComplete:      false,
+});
 
 // ── Context ────────────────────────────────────────────────────────────────────
 
@@ -41,64 +65,55 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
   const [user,      setUser]      = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // onAuthStateChanged fires once on mount (to restore a persisted session)
-  // and again whenever the user signs in or out.
+  const loadProfile = useCallback(async (uid: string): Promise<UserProfile | null> => {
+    try {
+      const snap = await getDoc(doc(db, 'users', uid));
+      return snap.exists() ? (snap.data() as UserProfile) : null;
+    } catch {
+      return null;
+    }
+  }, []);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async firebaseUser => {
       if (firebaseUser) {
-        try {
-          const snap = await getDoc(doc(db, 'users', firebaseUser.uid));
-          if (snap.exists()) {
-            setUser(snap.data() as UserProfile);
-          } else {
-            // Fallback — should not normally happen
-            setUser({
-              uid:    firebaseUser.uid,
-              name:   firebaseUser.email?.split('@')[0] ?? 'User',
-              email:  firebaseUser.email ?? '',
-              handle: '@' + (firebaseUser.email?.split('@')[0] ?? 'user'),
-            });
-          }
-        } catch {
-          setUser(null);
-        }
+        const profile = await loadProfile(firebaseUser.uid);
+        setUser(profile ?? defaultProfile(
+          firebaseUser.uid,
+          firebaseUser.email?.split('@')[0] ?? 'User',
+          firebaseUser.email ?? '',
+        ));
       } else {
         setUser(null);
       }
       setIsLoading(false);
     });
     return unsubscribe;
-  }, []);
-
-  // ── Auth actions ─────────────────────────────────────────────────────────────
+  }, [loadProfile]);
 
   const login = async (email: string, password: string) => {
     await signInWithEmailAndPassword(auth, email.trim(), password);
-    // onAuthStateChanged handles updating the user state
   };
 
   const register = async (name: string, email: string, password: string) => {
-    const cred = await createUserWithEmailAndPassword(auth, email.trim(), password);
-    const handle =
-      '@' +
-      name.trim().toLowerCase().replace(/\s+/g, '.').replace(/[^a-z0-9.]/g, '');
-    const profile: UserProfile = {
-      uid:    cred.user.uid,
-      name:   name.trim(),
-      email:  email.trim().toLowerCase(),
-      handle: handle || '@user',
-    };
-    // Save the profile to Firestore so others can look the user up
+    const cred    = await createUserWithEmailAndPassword(auth, email.trim(), password);
+    const profile = defaultProfile(cred.user.uid, name.trim(), email.trim().toLowerCase());
     await setDoc(doc(db, 'users', cred.user.uid), profile);
-    // onAuthStateChanged fires and sets the user state automatically
   };
 
   const logout = async () => {
     await signOut(auth);
   };
 
+  /** Call after completing profile setup to reload state without waiting for onAuthStateChanged */
+  const refreshUser = useCallback(async () => {
+    if (!auth.currentUser) return;
+    const profile = await loadProfile(auth.currentUser.uid);
+    if (profile) setUser(profile);
+  }, [loadProfile]);
+
   return (
-    <AuthContext.Provider value={{user, isLoading, login, register, logout}}>
+    <AuthContext.Provider value={{user, isLoading, login, register, logout, refreshUser}}>
       {children}
     </AuthContext.Provider>
   );
@@ -106,6 +121,6 @@ export const AuthProvider: React.FC<{children: React.ReactNode}> = ({children}) 
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
-  if (!ctx) throw new Error('useAuth must be used inside AuthProvider');
+  if (!ctx) throw new Error('useAuth must be inside AuthProvider');
   return ctx;
 };
