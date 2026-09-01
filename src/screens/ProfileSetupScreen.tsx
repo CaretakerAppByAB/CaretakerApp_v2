@@ -9,10 +9,12 @@
 import React, {useState} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, SafeAreaView, Switch, Alert, ActivityIndicator,
+  StyleSheet, Switch, Alert, ActivityIndicator,
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import {completeProfileSetup, PRONOUN_OPTIONS, GOAL_OPTIONS, RESPONSIBILITY_OPTIONS} from '../services/userService';
+import ScreenHeader from '../components/ScreenHeader';
+import {Colors} from '../theme/colors';
 
 const TOTAL_STEPS = 4;
 
@@ -94,14 +96,19 @@ const ProfileSetupScreen: React.FC = () => {
   const stepTitle = ['Basic Info', 'Your Goals', 'Your Responsibilities', 'Notifications'][step - 1];
 
   return (
-    <SafeAreaView style={cs.safe}>
+    <View style={cs.safe}>
 
-      {/* Header */}
-      <View style={cs.header}>
-        <Text style={cs.headerTitle}>Set Up Your Profile</Text>
-        <Text style={cs.headerSub}>Step {step} of {TOTAL_STEPS} — {stepTitle}</Text>
-        <Progress step={step}/>
-      </View>
+      <ScreenHeader
+        title="Set Up Your Profile"
+        titleSlot={
+          <View style={cs.headerTitleSlot}>
+            <Text style={cs.headerTitle} numberOfLines={1}>Set Up Your Profile</Text>
+            <Text style={cs.headerSub} numberOfLines={1}>Step {step} of {TOTAL_STEPS} — {stepTitle}</Text>
+            <Progress step={step}/>
+          </View>
+        }
+        onBack={step > 1 ? () => setStep(s => s - 1) : undefined}
+      />
 
       <ScrollView style={cs.scroll} contentContainerStyle={cs.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
@@ -175,8 +182,8 @@ const ProfileSetupScreen: React.FC = () => {
                 <Switch
                   value={notificationsEnabled}
                   onValueChange={setNotifications}
-                  trackColor={{false: '#E8E8E8', true: '#8B7EEE'}}
-                  thumbColor="#FFFFFF"
+                  trackColor={{false: '#E8E8E8', true: Colors.primary}}
+                  thumbColor={Colors.white}
                 />
               </View>
             </View>
@@ -204,7 +211,7 @@ const ProfileSetupScreen: React.FC = () => {
           disabled={saving}
           activeOpacity={0.85}>
           {saving
-            ? <ActivityIndicator color="#fff"/>
+            ? <ActivityIndicator color={Colors.white}/>
             : <Text style={cs.nextBtnText}>{step === TOTAL_STEPS ? 'Finish' : 'Next'}</Text>
           }
         </TouchableOpacity>
@@ -216,42 +223,37 @@ const ProfileSetupScreen: React.FC = () => {
           <Text style={cs.skipText}>Skip for now</Text>
         </TouchableOpacity>
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const cs = StyleSheet.create({
-  safe:   {flex: 1, backgroundColor: '#F5F3FF'},
+  safe:   {flex: 1, backgroundColor: Colors.backgroundLight},
   scroll: {flex: 1},
   container: {padding: 20, paddingBottom: 8},
 
-  header: {
-    backgroundColor: '#8B7EEE',
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 20,
-  },
-  headerTitle: {fontSize: 22, fontWeight: '800', color: '#FFFFFF'},
-  headerSub:   {fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4, marginBottom: 12},
+  headerTitleSlot: {width: '100%', alignItems: 'center'},
+  headerTitle: {fontSize: 18, fontWeight: '700', color: Colors.white},
+  headerSub:   {fontSize: 12, fontWeight: '500', color: Colors.overlayLight, marginTop: 2, marginBottom: 10},
 
-  progressWrap:    {flexDirection: 'row', gap: 8},
-  progressDot:     {flex: 1, height: 4, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.3)'},
-  progressDotActive:{backgroundColor: '#FFFFFF'},
+  progressWrap:    {flexDirection: 'row', gap: 8, width: '100%'},
+  progressDot:     {flex: 1, height: 4, borderRadius: 2, backgroundColor: Colors.overlayButton},
+  progressDotActive:{backgroundColor: Colors.white},
 
-  sectionLabel: {fontSize: 17, fontWeight: '700', color: '#1A1A1A', marginBottom: 6},
-  sectionSub:   {fontSize: 13, color: '#7E7E7E', marginBottom: 16},
+  sectionLabel: {fontSize: 17, fontWeight: '700', color: Colors.text, marginBottom: 6},
+  sectionSub:   {fontSize: 13, color: Colors.textSecondary, marginBottom: 16},
 
-  fieldLabel: {fontSize: 14, fontWeight: '600', color: '#444', marginBottom: 8},
+  fieldLabel: {fontSize: 14, fontWeight: '600', color: Colors.text, marginBottom: 8},
   textInput: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     padding: 14,
     fontSize: 15,
-    color: '#000',
+    color: Colors.text,
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
+    borderColor: Colors.border,
     marginBottom: 20,
   },
 
@@ -261,28 +263,28 @@ const cs = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderWidth: 1.5,
-    borderColor: '#E0E0E0',
+    borderColor: Colors.border,
   },
-  chipSelected:     {backgroundColor: '#8B7EEE', borderColor: '#8B7EEE'},
-  chipText:         {fontSize: 13, fontWeight: '500', color: '#555'},
-  chipTextSelected: {color: '#FFFFFF', fontWeight: '700'},
+  chipSelected:     {backgroundColor: Colors.primary, borderColor: Colors.primary},
+  chipText:         {fontSize: 13, fontWeight: '500', color: Colors.textSecondary},
+  chipTextSelected: {color: Colors.white, fontWeight: '700'},
 
-  notifCard: {backgroundColor: '#FFFFFF', borderRadius: 14, padding: 16, marginBottom: 12, shadowColor:'#000', shadowOffset:{width:0,height:1}, shadowOpacity:0.06, shadowRadius:4, elevation:2},
+  notifCard: {backgroundColor: Colors.white, borderRadius: 14, padding: 16, marginBottom: 12, shadowColor:'#000', shadowOffset:{width:0,height:1}, shadowOpacity:0.06, shadowRadius:4, elevation:2},
   notifRow:  {flexDirection:'row', alignItems:'center', justifyContent:'space-between'},
-  notifTitle:{fontSize:15, fontWeight:'700', color:'#000'},
-  notifSub:  {fontSize:12, color:'#7E7E7E', marginTop:3},
-  finishNote:{fontSize:12, color:'#9E9E9E', textAlign:'center', lineHeight:18},
+  notifTitle:{fontSize:15, fontWeight:'700', color: Colors.text},
+  notifSub:  {fontSize:12, color: Colors.textSecondary, marginTop:3},
+  finishNote:{fontSize:12, color: Colors.textSecondary, textAlign:'center', lineHeight:18},
 
   footer:     {flexDirection:'row', paddingHorizontal:20, paddingVertical:16, gap:12},
-  backBtn:    {flex:0.4, borderRadius:12, borderWidth:1.5, borderColor:'#8B7EEE', paddingVertical:14, alignItems:'center'},
-  backBtnText:{fontSize:15, fontWeight:'700', color:'#8B7EEE'},
-  nextBtn:    {flex:0.6, backgroundColor:'#8B7EEE', borderRadius:12, paddingVertical:14, alignItems:'center'},
+  backBtn:    {flex:0.4, borderRadius:12, borderWidth:1.5, borderColor: Colors.primary, paddingVertical:14, alignItems:'center'},
+  backBtnText:{fontSize:15, fontWeight:'700', color: Colors.primary},
+  nextBtn:    {flex:0.6, backgroundColor: Colors.primary, borderRadius:12, paddingVertical:14, alignItems:'center'},
   btnDisabled:{opacity:0.55},
-  nextBtnText:{fontSize:15, fontWeight:'700', color:'#FFFFFF'},
+  nextBtnText:{fontSize:15, fontWeight:'700', color: Colors.white},
   skipWrap:   {alignItems:'center', paddingBottom:16},
-  skipText:   {fontSize:13, color:'#9E9E9E'},
+  skipText:   {fontSize:13, color: Colors.textSecondary},
 });
 
 export default ProfileSetupScreen;

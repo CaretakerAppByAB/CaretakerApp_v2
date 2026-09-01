@@ -5,7 +5,7 @@
  * A non-blocking PHI warning appears if likely identifiers are detected.
  */
 
-import React, {useState, useLayoutEffect, useCallback, useMemo} from 'react';
+import React, {useState, useCallback, useMemo} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, KeyboardAvoidingView, Platform,
@@ -19,26 +19,25 @@ import {
 } from '../services/journalService';
 import {detectPHI, redactPHI} from '../services/phiDetection';
 import PHIWarningBanner from '../components/PHIWarningBanner';
+import ScreenHeader from '../components/ScreenHeader';
+import {Colors} from '../theme/colors';
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
 const RefreshIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-    <Path d="M1 4v6h6M23 20v-6h-6" stroke="#8B7EEE" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d="M1 4v6h6M23 20v-6h-6" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
     <Path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 0 1 3.51 15"
-      stroke="#8B7EEE" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+      stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
   </Svg>
 );
 
 const LockIcon = () => (
   <Svg width={12} height={12} viewBox="0 0 24 24" fill="none">
-    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke="#8B7EEE" strokeWidth={2}/>
-    <Path d="M7 11V7a5 5 0 0110 0v4" stroke="#8B7EEE" strokeWidth={2} strokeLinecap="round"/>
+    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke={Colors.primary} strokeWidth={2}/>
+    <Path d="M7 11V7a5 5 0 0110 0v4" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round"/>
   </Svg>
 );
-
-const formatHeader = (ms: number) =>
-  new Date(ms).toLocaleDateString('en-US', {weekday: 'long', month: 'long', day: 'numeric'});
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 
@@ -120,33 +119,26 @@ const JournalEntryScreen: React.FC<{route: any; navigation: any}> = ({route, nav
 
   // ── Header buttons ──────────────────────────────────────────────────────────
 
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      title: existingEntry
-        ? formatHeader(existingEntry.createdAt)
-        : (initialType === 'guided' ? 'Guided Journal' : 'Free Write'),
-      headerRight: () => (
-        <View style={{flexDirection: 'row', alignItems: 'center', gap: 16, marginRight: 4}}>
-          {existingEntry && (
-            <TouchableOpacity onPress={handleDelete} activeOpacity={0.7}>
-              <Text style={{color: 'rgba(255,180,180,1)', fontWeight: '600', fontSize: 14}}>Delete</Text>
-            </TouchableOpacity>
-          )}
-          <TouchableOpacity onPress={handleSave} disabled={!content.trim() || saving || saved} activeOpacity={0.7}>
-            {saving
-              ? <ActivityIndicator color="#fff" size="small"/>
-              : <Text style={{
-                  color: content.trim() && !saved ? '#fff' : 'rgba(255,255,255,0.45)',
-                  fontWeight: '700', fontSize: 15,
-                }}>
-                  {saved ? 'Saved ✓' : 'Save'}
-                </Text>
-            }
-          </TouchableOpacity>
-        </View>
-      ),
-    });
-  }, [content, saving, saved, existingEntry, handleSave, handleDelete]);
+  const headerRight = (
+    <View style={{flexDirection: 'row', alignItems: 'center', gap: 16}}>
+      {existingEntry && (
+        <TouchableOpacity onPress={handleDelete} activeOpacity={0.7}>
+          <Text style={{color: 'rgba(255,180,180,1)', fontWeight: '600', fontSize: 14}}>Delete</Text>
+        </TouchableOpacity>
+      )}
+      <TouchableOpacity onPress={handleSave} disabled={!content.trim() || saving || saved} activeOpacity={0.7}>
+        {saving
+          ? <ActivityIndicator color={Colors.white} size="small"/>
+          : <Text style={{
+              color: content.trim() && !saved ? Colors.white : 'rgba(255,255,255,0.45)',
+              fontWeight: '700', fontSize: 15,
+            }}>
+              {saved ? 'Saved ✓' : 'Save'}
+            </Text>
+        }
+      </TouchableOpacity>
+    </View>
+  );
 
   const cyclePrompt = () => {
     const next = (promptIdx + 1) % GUIDED_PROMPTS.length;
@@ -156,77 +148,81 @@ const JournalEntryScreen: React.FC<{route: any; navigation: any}> = ({route, nav
   };
 
   return (
-    <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView
-        style={s.scroll}
-        contentContainerStyle={s.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled">
+    <View style={s.screen}>
+      <ScreenHeader title="Journal Entry" onBack={() => navigation.goBack()} rightElement={headerRight}/>
+      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <ScrollView
+          style={s.scroll}
+          contentContainerStyle={s.scrollContent}
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled">
 
-        {/* Encryption reassurance */}
-        <View style={s.encryptedBar}>
-          <LockIcon/>
-          <Text style={s.encryptedText}>
-            End-to-end encrypted — only you can read this
-          </Text>
-        </View>
-
-        {/* PHI warning (non-blocking) */}
-        <PHIWarningBanner
-          matches={phiMatches}
-          onRedact={handleRedact}
-          onDismiss={() => setPhiDismissed(true)}
-        />
-
-        {/* Guided prompt */}
-        {initialType === 'guided' && (
-          <View style={s.promptBar}>
-            <Text style={s.promptText} numberOfLines={2}>
-              {prompt || 'Tap ↻ for a prompt'}
+          {/* Encryption reassurance */}
+          <View style={s.encryptedBar}>
+            <LockIcon/>
+            <Text style={s.encryptedText}>
+              End-to-end encrypted — only you can read this
             </Text>
-            <TouchableOpacity style={s.cycleBtn} onPress={cyclePrompt} activeOpacity={0.7}>
-              <RefreshIcon/>
-            </TouchableOpacity>
           </View>
-        )}
 
-        {/* Writing area */}
-        <View style={s.writingArea}>
-          <TextInput
-            style={s.textInput}
-            placeholder={
-              initialType === 'guided'
-                ? 'Write your thoughts here...'
-                : 'Start writing freely...'
-            }
-            placeholderTextColor="#BBBBBB"
-            value={content}
-            onChangeText={text => {
-              setContent(text);
-              setSaved(false);
-              if (phiDismissed && text.length < 4) setPhiDismissed(false);
-            }}
-            multiline
-            textAlignVertical="top"
-            autoFocus={!isViewing}
-            scrollEnabled={false}
+          {/* PHI warning (non-blocking) */}
+          <PHIWarningBanner
+            matches={phiMatches}
+            onRedact={handleRedact}
+            onDismiss={() => setPhiDismissed(true)}
           />
-        </View>
 
-        <Text style={s.wordCount}>
-          {content.trim().split(/\s+/).filter(Boolean).length} words
-        </Text>
+          {/* Guided prompt */}
+          {initialType === 'guided' && (
+            <View style={s.promptBar}>
+              <Text style={s.promptText} numberOfLines={2}>
+                {prompt || 'Tap ↻ for a prompt'}
+              </Text>
+              <TouchableOpacity style={s.cycleBtn} onPress={cyclePrompt} activeOpacity={0.7}>
+                <RefreshIcon/>
+              </TouchableOpacity>
+            </View>
+          )}
 
-        <View style={{height: 32}}/>
-      </ScrollView>
-    </KeyboardAvoidingView>
+          {/* Writing area */}
+          <View style={s.writingArea}>
+            <TextInput
+              style={s.textInput}
+              placeholder={
+                initialType === 'guided'
+                  ? 'Write your thoughts here...'
+                  : 'Start writing freely...'
+              }
+              placeholderTextColor="#BBBBBB"
+              value={content}
+              onChangeText={text => {
+                setContent(text);
+                setSaved(false);
+                if (phiDismissed && text.length < 4) setPhiDismissed(false);
+              }}
+              multiline
+              textAlignVertical="top"
+              autoFocus={!isViewing}
+              scrollEnabled={false}
+            />
+          </View>
+
+          <Text style={s.wordCount}>
+            {content.trim().split(/\s+/).filter(Boolean).length} words
+          </Text>
+
+          <View style={{height: 32}}/>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  flex:          {flex: 1, backgroundColor: '#F5F3FF'},
+  screen:        {flex: 1, backgroundColor: Colors.backgroundLight},
+  flex:          {flex: 1},
   scroll:        {flex: 1},
   scrollContent: {padding: 16, paddingBottom: 32},
 
@@ -237,12 +233,12 @@ const s = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 4,
   },
-  encryptedText: {fontSize: 11, color: '#8B7EEE', fontWeight: '600'},
+  encryptedText: {fontSize: 11, color: Colors.primary, fontWeight: '600'},
 
   promptBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 12,
@@ -251,11 +247,11 @@ const s = StyleSheet.create({
     shadowColor: '#000', shadowOffset: {width:0,height:1},
     shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
   },
-  promptText: {flex: 1, fontSize: 14, fontWeight: '600', color: '#5A4DA8', lineHeight: 20},
+  promptText: {flex: 1, fontSize: 14, fontWeight: '600', color: Colors.primaryDark, lineHeight: 20},
   cycleBtn:   {padding: 4},
 
   writingArea: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 14,
     padding: 16,
     minHeight: 320,
@@ -263,7 +259,7 @@ const s = StyleSheet.create({
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 3,
   },
   textInput: {
-    fontSize: 15, color: '#1A1A1A', lineHeight: 26,
+    fontSize: 15, color: Colors.text, lineHeight: 26,
     minHeight: 300, padding: 0,
   },
   wordCount: {textAlign: 'right', fontSize: 11, color: '#BBBBBB', marginTop: 8, marginRight: 4},

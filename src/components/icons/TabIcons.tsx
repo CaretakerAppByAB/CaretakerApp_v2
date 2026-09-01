@@ -8,7 +8,8 @@
  */
 
 import React from 'react';
-import Svg, {Path} from 'react-native-svg';
+import Svg, {Path, Rect} from 'react-native-svg';
+import {Colors} from '../../theme/colors';
 
 interface IconProps {
   color?: string;
@@ -112,7 +113,7 @@ export const MoodChartIcon = ({color = '#FFFFFF', size = 44}: IconProps) => (
 // ── Envelope Open — used by ThankYouNoteScreen, ChatScreen, ThankYouNoteOverlay ──
 // Exported here so no screen needs to import from another screen.
 
-export const EnvelopeOpenIcon = ({size = 40, color = '#8B7EEE'}: IconProps) => (
+export const EnvelopeOpenIcon = ({size = 40, color = Colors.primary}: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 48 48" fill="none">
     {/* Envelope body */}
     <Path
@@ -121,5 +122,52 @@ export const EnvelopeOpenIcon = ({size = 40, color = '#8B7EEE'}: IconProps) => (
     />
     {/* Open flap */}
     <Path d="M6 20L24 30L42 20" stroke={color} strokeWidth={2.5} strokeLinecap="round"/>
+  </Svg>
+);
+
+// ── Calendar — used for the Mood Calendar dashboard tile ───────────────────────
+
+export const CalendarIcon = ({color = '#000000', size = 24}: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Rect x={3.5} y={5} width={17} height={15} rx={2.5} stroke={color} strokeWidth={1.7}/>
+    <Path d="M3.5 10h17" stroke={color} strokeWidth={1.7} strokeLinecap="round"/>
+    <Path d="M8 2.5v5" stroke={color} strokeWidth={1.7} strokeLinecap="round"/>
+    <Path d="M16 2.5v5" stroke={color} strokeWidth={1.7} strokeLinecap="round"/>
+  </Svg>
+);
+
+// ── Gratitude (hands cradling a heart) — used for the Gratitude dashboard tile ─
+
+export const GratitudeIcon = ({color = '#000000', size = 24}: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M12 12.8c-.9-.8-3.4-2.8-3.4-4.8a2.3 2.3 0 014.2-1.3 2.3 2.3 0 014.2 1.3c0 2-2.5 4-3.4 4.8l-.8.7-.8-.7z"
+      stroke={color} strokeWidth={1.6} strokeLinejoin="round" strokeLinecap="round"
+    />
+    <Path
+      d="M2.5 14.5c0-1.6.9-3 2.3-3.7 1-.5 1.9 0 2.6.8"
+      stroke={color} strokeWidth={1.6} strokeLinecap="round"
+    />
+    <Path
+      d="M2.5 14.5c0 3.4 3 5.6 9.5 7.5"
+      stroke={color} strokeWidth={1.6} strokeLinecap="round"
+    />
+    <Path
+      d="M21.5 14.5c0-1.6-.9-3-2.3-3.7-1-.5-1.9 0-2.6.8"
+      stroke={color} strokeWidth={1.6} strokeLinecap="round"
+    />
+    <Path
+      d="M21.5 14.5c0 3.4-3 5.6-9.5 7.5"
+      stroke={color} strokeWidth={1.6} strokeLinecap="round"
+    />
+  </Svg>
+);
+
+// ── Message bubble (simple, with tail) — used for the Messages dashboard tile ──
+
+export const MessageBubbleIcon = ({color = '#000000', size = 24}: IconProps) => (
+  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <Rect x={3} y={4.5} width={18} height={12} rx={4} stroke={color} strokeWidth={1.7}/>
+    <Path d="M8 16.5v3.8l4.2-3.8" stroke={color} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round"/>
   </Svg>
 );

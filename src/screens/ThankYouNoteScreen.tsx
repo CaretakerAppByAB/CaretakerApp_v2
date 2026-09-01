@@ -12,29 +12,17 @@ import {
   StyleSheet, SafeAreaView, StatusBar, KeyboardAvoidingView,
   Platform, ActivityIndicator, Alert, Dimensions,
 } from 'react-native';
-import Svg, {Path} from 'react-native-svg';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {EnvelopeOpenIcon} from '../components/icons/TabIcons';
 import {useAuth} from '../context/AuthContext';
 import {getOrCreateConversation, sendMessage} from '../services/messagingService';
 import {detectPHI, redactPHI} from '../services/phiDetection';
 import PHIWarningBanner from '../components/PHIWarningBanner';
+import ScreenHeader from '../components/ScreenHeader';
+import Avatar from '../components/Avatar';
+import {Colors} from '../theme/colors';
 
 const {width: SW} = Dimensions.get('window');
-
-// ── Icons ──────────────────────────────────────────────────────────────────────
-
-const BackArrow = () => (
-  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-    <Path d="M19 12H5M12 19l-7-7 7-7" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
-  </Svg>
-);
-
-// EnvelopeOpenIcon is imported from '../components/icons/TabIcons' above
-
-// ── Helpers ────────────────────────────────────────────────────────────────────
-
-const getInitials = (name: string) =>
-  name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase() || '?';
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 
@@ -56,6 +44,7 @@ const ThankYouNoteScreen: React.FC<{route: any; navigation: any}> = ({route, nav
 
   const [message, setMessage] = useState('');
   const [phiDismissed, setPhiDismissed] = useState(false);
+  const insets = useSafeAreaInsets();
 
   // PHI detection on the note text
   const phiMatches = useMemo(() => {
@@ -90,9 +79,9 @@ const ThankYouNoteScreen: React.FC<{route: any; navigation: any}> = ({route, nav
   if (sent) {
     return (
       <SafeAreaView style={[s.safe, {justifyContent: 'center', alignItems: 'center', padding: 32}]}>
-        <StatusBar barStyle="dark-content" backgroundColor="#fff"/>
+        <StatusBar barStyle="dark-content" backgroundColor={Colors.white}/>
         <View style={s.successIcon}>
-          <EnvelopeOpenIcon size={52} color="#8B7EEE"/>
+          <EnvelopeOpenIcon size={52} color={Colors.primary}/>
         </View>
         <Text style={s.successTitle}>Note Delivered! 💜</Text>
         <Text style={s.successSub}>
@@ -117,20 +106,17 @@ const ThankYouNoteScreen: React.FC<{route: any; navigation: any}> = ({route, nav
   // ── Compose state ────────────────────────────────────────────────────────────
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff"/>
-
-      {/* Header — matches ChatScreen style */}
-      <View style={s.header}>
-        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <BackArrow/>
-        </TouchableOpacity>
-        <View style={s.headerAvatar}>
-          <Text style={s.headerAvatarText}>{getInitials(receiverName)}</Text>
-        </View>
-        <Text style={s.headerName} numberOfLines={1}>{receiverName}</Text>
-      </View>
-      <View style={s.headerDivider}/>
+    <View style={s.safe}>
+      <ScreenHeader
+        title={receiverName}
+        onBack={() => navigation.goBack()}
+        titleSlot={
+          <View style={s.headerTitleSlot}>
+            <Avatar name={receiverName} size={36} variant="onDark"/>
+            <Text style={s.headerName} numberOfLines={1}>{receiverName}</Text>
+          </View>
+        }
+      />
 
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
@@ -174,7 +160,7 @@ const ThankYouNoteScreen: React.FC<{route: any; navigation: any}> = ({route, nav
               {[0,1,2].map(i => <View key={i} style={s.paperLine}/>)}
               {/* Envelope watermark */}
               <View style={s.watermark}>
-                <EnvelopeOpenIcon size={56} color="#8B7EEE"/>
+                <EnvelopeOpenIcon size={56} color={Colors.primary}/>
               </View>
             </View>
 
@@ -209,7 +195,7 @@ const ThankYouNoteScreen: React.FC<{route: any; navigation: any}> = ({route, nav
         </ScrollView>
 
         {/* SEND button */}
-        <View style={s.sendWrap}>
+        <View style={[s.sendWrap, {paddingBottom: (Platform.OS === 'ios' ? 16 : 12) + insets.bottom}]}>
           <TouchableOpacity
             style={[s.sendBtn, (!message.trim() || sending) && s.sendBtnDisabled]}
             onPress={handleSend}
@@ -223,7 +209,7 @@ const ThankYouNoteScreen: React.FC<{route: any; navigation: any}> = ({route, nav
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
@@ -233,30 +219,19 @@ const SIDE_W      = 112;
 const CARD_W      = SW - 32 - 10 - SIDE_W; // 16px padding each side, 10px gap
 
 const s = StyleSheet.create({
-  safe:  {flex: 1, backgroundColor: '#FFFFFF'},
+  safe:  {flex: 1, backgroundColor: Colors.white},
   flex:  {flex: 1},
 
-  // Header
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    backgroundColor: '#FFFFFF',
-    gap: 10,
-  },
-  backBtn:          {padding: 6},
-  headerAvatar:     {width: 40, height: 40, borderRadius: 20, backgroundColor: '#9E9E9E', alignItems: 'center', justifyContent: 'center'},
-  headerAvatarText: {fontSize: 14, fontWeight: '700', color: '#fff'},
-  headerName:       {flex: 1, fontSize: 15, fontWeight: '700', color: '#000'},
-  headerDivider:    {height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(0,0,0,0.12)'},
+  // Header (titleSlot content — sits on the purple ScreenHeader bar)
+  headerTitleSlot: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  headerName:      {fontSize: 15, fontWeight: '700', color: Colors.white},
 
   // Scroll
   scroll:        {flex: 1},
   scrollContent: {paddingHorizontal: 16, paddingTop: 12, paddingBottom: 8},
 
   dateSep: {textAlign: 'center', fontSize: 12, color: '#9E9E9E', marginBottom: 14},
-  encNotice: {textAlign: 'center', fontSize: 11, color: '#8B7EEE', fontWeight: '600', marginBottom: 12},
+  encNotice: {textAlign: 'center', fontSize: 11, color: Colors.primary, fontWeight: '600', marginBottom: 12},
 
   // Card + side panel row
   cardRow: {flexDirection: 'row', gap: 10, marginBottom: 14},
@@ -272,7 +247,7 @@ const s = StyleSheet.create({
   },
   letterInput: {
     fontSize:   14,
-    color:      '#000',
+    color:      Colors.text,
     lineHeight: 22,
     minHeight:  120,
     padding:    0,
@@ -317,27 +292,27 @@ const s = StyleSheet.create({
     paddingVertical:   12,
     paddingHorizontal: 18,
   },
-  quickPillText: {color: '#FFFFFF', fontSize: 13, fontWeight: '500'},
+  quickPillText: {color: Colors.white, fontSize: 13, fontWeight: '500'},
 
   // Send button
-  sendWrap: {paddingHorizontal: 16, paddingBottom: Platform.OS === 'ios' ? 16 : 12, paddingTop: 8, backgroundColor: '#fff'},
+  sendWrap: {paddingHorizontal: 16, paddingBottom: Platform.OS === 'ios' ? 16 : 12, paddingTop: 8, backgroundColor: Colors.white},
   sendBtn: {
-    backgroundColor: '#8B7EEE',
+    backgroundColor: Colors.primary,
     borderRadius:     14,
     paddingVertical:  16,
     alignItems:      'center',
   },
   sendBtnDisabled: {opacity: 0.45},
-  sendBtnText:     {color: '#fff', fontSize: 17, fontWeight: '800', letterSpacing: 1.5},
+  sendBtnText:     {color: Colors.white, fontSize: 17, fontWeight: '800', letterSpacing: 1.5},
 
   // Success
-  successIcon:      {width: 88, height: 88, borderRadius: 44, backgroundColor: '#F0EEFF', alignItems: 'center', justifyContent: 'center', marginBottom: 20},
-  successTitle:     {fontSize: 24, fontWeight: '800', color: '#8B7EEE', marginBottom: 10},
+  successIcon:      {width: 88, height: 88, borderRadius: 44, backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center', marginBottom: 20},
+  successTitle:     {fontSize: 24, fontWeight: '800', color: Colors.primary, marginBottom: 10},
   successSub:       {fontSize: 15, color: '#555', textAlign: 'center', lineHeight: 22, marginBottom: 32},
-  successBtn:       {backgroundColor: '#8B7EEE', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 40, marginBottom: 14},
-  successBtnText:   {color: '#fff', fontSize: 15, fontWeight: '700'},
+  successBtn:       {backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 14, paddingHorizontal: 40, marginBottom: 14},
+  successBtnText:   {color: Colors.white, fontSize: 15, fontWeight: '700'},
   successSecondary: {paddingVertical: 8},
-  successSecondaryText: {color: '#8B7EEE', fontSize: 14, fontWeight: '600'},
+  successSecondaryText: {color: Colors.primary, fontSize: 14, fontWeight: '600'},
 });
 
 export default ThankYouNoteScreen;

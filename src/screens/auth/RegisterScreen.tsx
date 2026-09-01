@@ -9,18 +9,20 @@ import {
 } from 'react-native';
 import Svg, {Path, Rect} from 'react-native-svg';
 import {useAuth} from '../../context/AuthContext';
+import ScreenHeader from '../../components/ScreenHeader';
+import {Colors} from '../../theme/colors';
 
 const EmailIcon = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-    <Rect x={2} y={4} width={20} height={16} rx={3} stroke="#8B7EEE" strokeWidth={1.8}/>
-    <Path d="M2 8l10 6 10-6" stroke="#8B7EEE" strokeWidth={1.8} strokeLinecap="round"/>
+    <Rect x={2} y={4} width={20} height={16} rx={3} stroke={Colors.primary} strokeWidth={1.8}/>
+    <Path d="M2 8l10 6 10-6" stroke={Colors.primary} strokeWidth={1.8} strokeLinecap="round"/>
   </Svg>
 );
 
 const LockIcon = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke="#8B7EEE" strokeWidth={1.8}/>
-    <Path d="M7 11V7a5 5 0 0110 0v4" stroke="#8B7EEE" strokeWidth={1.8} strokeLinecap="round"/>
+    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke={Colors.primary} strokeWidth={1.8}/>
+    <Path d="M7 11V7a5 5 0 0110 0v4" stroke={Colors.primary} strokeWidth={1.8} strokeLinecap="round"/>
   </Svg>
 );
 
@@ -61,13 +63,11 @@ const RegisterScreen: React.FC<{navigation: any}> = ({navigation}) => {
   };
 
   return (
-    <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-      <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
+    <View style={s.root}>
+      <ScreenHeader title="Create Account" onBack={() => navigation.goBack()}/>
 
-        <View style={s.header}>
-          <Text style={s.title}>Create Account</Text>
-          <Text style={s.subtitle}>Join AlzApp:</Text>
-        </View>
+      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+      <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
 
         <View style={s.inputRow}>
           <EmailIcon/>
@@ -130,7 +130,7 @@ const RegisterScreen: React.FC<{navigation: any}> = ({navigation}) => {
           disabled={loading}
           activeOpacity={0.85}>
           {loading
-            ? <ActivityIndicator color="#fff"/>
+            ? <ActivityIndicator color={Colors.white}/>
             : <Text style={s.continueBtnText}>CONTINUE</Text>
           }
         </TouchableOpacity>
@@ -155,63 +155,61 @@ const RegisterScreen: React.FC<{navigation: any}> = ({navigation}) => {
         </View>
 
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </View>
   );
 };
 
 const s = StyleSheet.create({
-  flex:      {flex: 1, backgroundColor: '#FFFFFF'},
-  container: {flexGrow: 1, paddingHorizontal: 28, paddingTop: 60, paddingBottom: 40},
-
-  header:   {marginBottom: 32},
-  title:    {fontSize: 28, fontWeight: '800', color: '#1A1A1A', marginBottom: 6},
-  subtitle: {fontSize: 15, color: '#555555'},
+  root:      {flex: 1},
+  flex:      {flex: 1, backgroundColor: Colors.white},
+  container: {flexGrow: 1, paddingHorizontal: 28, paddingTop: 32, paddingBottom: 40},
 
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0EEFF',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
     marginBottom: 12,
     gap: 10,
   },
-  input: {flex: 1, fontSize: 15, color: '#000', padding: 0},
+  input: {flex: 1, fontSize: 15, color: Colors.text, padding: 0},
 
   termsText: {
     textAlign: 'center',
     fontSize: 12,
-    color: '#7E7E7E',
+    color: Colors.textSecondary,
     lineHeight: 18,
     marginVertical: 16,
   },
 
   continueBtn: {
-    backgroundColor: '#1A1A2E',
+    backgroundColor: Colors.primary,
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
     marginBottom: 16,
   },
   btnDisabled:     {opacity: 0.6},
-  continueBtnText: {color: '#FFFFFF', fontSize: 15, fontWeight: '800', letterSpacing: 1.2},
+  continueBtnText: {color: Colors.white, fontSize: 15, fontWeight: '800', letterSpacing: 1.2},
 
-  orText: {textAlign: 'center', fontSize: 13, color: '#9E9E9E', marginBottom: 14},
+  orText: {textAlign: 'center', fontSize: 13, color: Colors.textSecondary, marginBottom: 14},
 
   phoneBtn: {
-    backgroundColor: '#EDE9FF',
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: 'center',
     marginBottom: 24,
   },
-  phoneBtnText: {color: '#8B7EEE', fontSize: 14, fontWeight: '700', letterSpacing: 0.8},
+  phoneBtnText: {color: Colors.primary, fontSize: 14, fontWeight: '700', letterSpacing: 0.8},
 
   loginRow:     {flexDirection: 'row', alignItems: 'center', justifyContent: 'center'},
-  loginText:    {fontSize: 14, color: '#555555'},
-  loginPill:    {backgroundColor: '#EDE9FF', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 6},
-  loginPillText:{fontSize: 13, fontWeight: '700', color: '#8B7EEE'},
+  loginText:    {fontSize: 14, color: Colors.textSecondary},
+  loginPill:    {backgroundColor: Colors.primaryLight, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 6},
+  loginPillText:{fontSize: 13, fontWeight: '700', color: Colors.primary},
 });
 
 export default RegisterScreen;

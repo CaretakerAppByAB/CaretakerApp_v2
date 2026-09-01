@@ -20,7 +20,6 @@ import {
   ScrollView,
   StyleSheet,
   Dimensions,
-  StatusBar,
   ActivityIndicator,
   Alert,
   Modal,
@@ -30,6 +29,9 @@ import {
 import Svg, {Path, Circle} from 'react-native-svg';
 import {useAuth} from '../context/AuthContext';
 import {ensureKeyPair} from '../services/e2eService';
+import ScreenHeader from '../components/ScreenHeader';
+import Avatar from '../components/Avatar';
+import {Colors} from '../theme/colors';
 import {
   subscribeToConversations,
   getOrCreateConversation,
@@ -120,7 +122,7 @@ const HeartFilled = () => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
     <Path
       d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-      fill="#8B7EEE"
+      fill={Colors.primary}
     />
   </Svg>
 );
@@ -137,16 +139,16 @@ const ComposeIcon = () => (
 );
 
 // ── Avatar ─────────────────────────────────────────────────────────────────────
-// Unchanged from your version
 
-const Avatar: React.FC<{conv: Conversation}> = ({conv}) => (
+const ConvAvatar: React.FC<{conv: Conversation}> = ({conv}) => (
   <View style={s.avatarWrap}>
-    <View style={[s.avatar, conv.isSupport && s.avatarSupport]}>
-      {conv.isSupport
-        ? <GroupIcon />
-        : <Text style={s.avatarText}>{conv.initials}</Text>
-      }
-    </View>
+    {conv.isSupport ? (
+      <View style={[s.avatar, s.avatarSupport]}>
+        <GroupIcon />
+      </View>
+    ) : (
+      <Avatar name={conv.name} size={AVATAR_SIZE}/>
+    )}
     {conv.online && <View style={s.onlineDot}/>}
   </View>
 );
@@ -161,7 +163,7 @@ interface ConvRowProps {
 
 const ConversationRow: React.FC<ConvRowProps> = ({conv, onPress}) => (
   <TouchableOpacity style={s.convRow} onPress={onPress} activeOpacity={0.7}>
-    <Avatar conv={conv}/>
+    <ConvAvatar conv={conv}/>
     <View style={s.convMiddle}>
       <Text style={s.convName} numberOfLines={1}>{conv.name}</Text>
       <Text
@@ -284,9 +286,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({visible, currentUser, onClos
 
           {found && (
             <View style={s.foundCard}>
-              <View style={s.foundAvatar}>
-                <Text style={s.foundAvatarText}>{getInitials(found.name)}</Text>
-              </View>
+              <Avatar name={found.name} size={44}/>
               <View style={s.foundInfo}>
                 <Text style={s.foundName}>{found.name}</Text>
                 <Text style={s.foundHandle}>{found.handle}</Text>
@@ -390,22 +390,7 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
 
   return (
     <View style={s.screen}>
-      <StatusBar barStyle="light-content" backgroundColor="#8B7EEE" />
-
-      {/* ── Custom Purple Header — your original, with compose button added ── */}
-      <View style={s.customHeader}>
-        <View style={s.headerRow}>
-          {/* Invisible spacer keeps title perfectly centred */}
-          <View style={s.headerSpacer}/>
-          <Text style={s.headerTitle}>Messages</Text>
-          <TouchableOpacity
-            style={s.composeBtn}
-            onPress={() => setShowCompose(true)}
-            activeOpacity={0.7}>
-            <ComposeIcon/>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <ScreenHeader title="Messages"/>
 
       <ScrollView
         style={s.scroll}
@@ -413,17 +398,25 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
 
-        {/* ── Search ── */}
-        <View style={s.searchBar}>
-          <SearchIcon/>
-          <TextInput
-            style={s.searchInput}
-            placeholder="Search conversations"
-            placeholderTextColor="#9E9E9E"
-            value={search}
-            onChangeText={setSearch}
-            returnKeyType="search"
-          />
+        {/* ── Search + compose ── */}
+        <View style={s.searchRow}>
+          <View style={s.searchBar}>
+            <SearchIcon/>
+            <TextInput
+              style={s.searchInput}
+              placeholder="Search conversations"
+              placeholderTextColor="#9E9E9E"
+              value={search}
+              onChangeText={setSearch}
+              returnKeyType="search"
+            />
+          </View>
+          <TouchableOpacity
+            style={s.composeBtn}
+            onPress={() => setShowCompose(true)}
+            activeOpacity={0.7}>
+            <ComposeIcon/>
+          </TouchableOpacity>
         </View>
 
         {/* ── Filter pills ── */}
@@ -462,9 +455,9 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
 
         {/* Loading / error / empty / list */}
         {loading ? (
-          <ActivityIndicator color="#8B7EEE" style={{marginTop: 32}}/>
+          <ActivityIndicator color={Colors.primary} style={{marginTop: 32}}/>
         ) : error ? (
-          <Text style={[s.empty, {color: '#D87E7E'}]}>
+          <Text style={[s.empty, {color: Colors.error}]}>
             Could not load messages.{'\n'}Check your connection.
           </Text>
         ) : filtered.length === 0 ? (
@@ -507,55 +500,39 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
 const AVATAR_SIZE = 48;
 
 const s = StyleSheet.create({
-  screen:    {flex: 1, backgroundColor: '#F5F3FF'},
+  screen:    {flex: 1, backgroundColor: Colors.backgroundLight},
   scroll:    {flex: 1},
   container: {paddingBottom: 24},
 
-  // ── Your original header styles + headerRow/headerSpacer/composeBtn added ──
-  customHeader: {
-    backgroundColor: '#8B7EEE',
-    height: 130,
-    paddingBottom: 24,
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 2},
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  // Row that holds spacer | title | compose button
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    paddingHorizontal: 20,
-  },
-  headerSpacer: {width: 36},  // same width as composeBtn so title stays centred
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
   composeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {width: 0, height: 1},
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
 
-  // ── Your original search styles ──
-  searchBar: {
+  // ── Search ──
+  searchRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 24,
+    gap: 10,
     marginHorizontal: 20,
     marginTop: 16,
     marginBottom: 14,
+  },
+  searchBar: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    borderRadius: 24,
     paddingHorizontal: 14,
     paddingVertical: 10,
     gap: 8,
@@ -568,11 +545,11 @@ const s = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#000000',
+    color: Colors.text,
     padding: 0,
   },
 
-  // ── Your original filter pill styles ──
+  // ── Filter pills ──
   filterRow: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -583,22 +560,22 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 7,
     borderRadius: 20,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     shadowColor: '#000',
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.05,
     shadowRadius: 2,
     elevation: 1,
   },
-  filterPillActive: {backgroundColor: '#000000'},
-  filterLabel: {fontSize: 13, fontWeight: '500', color: '#555555'},
-  filterLabelActive: {color: '#FFFFFF', fontWeight: '700'},
+  filterPillActive: {backgroundColor: Colors.primary},
+  filterLabel: {fontSize: 13, fontWeight: '500', color: Colors.textSecondary},
+  filterLabelActive: {color: Colors.white, fontWeight: '700'},
 
-  // ── Your original support banner styles ──
+  // ── Support banner ──
   supportBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 14,
     marginHorizontal: 20,
     marginBottom: 20,
@@ -607,79 +584,76 @@ const s = StyleSheet.create({
     gap: 12,
   },
   supportText:  {flex: 1},
-  supportTitle: {fontSize: 14, fontWeight: '700', color: '#000000'},
-  supportSub:   {fontSize: 12, fontWeight: '400', color: '#555555', marginTop: 2},
+  supportTitle: {fontSize: 14, fontWeight: '700', color: Colors.text},
+  supportSub:   {fontSize: 12, fontWeight: '400', color: Colors.textSecondary, marginTop: 2},
 
-  // ── Your original section header styles ──
+  // ── Section header ──
   sectionHeader: {paddingHorizontal: 20, marginBottom: 4},
-  sectionTitle:  {fontSize: 16, fontWeight: '700', color: '#000000', marginBottom: 10},
-  sectionLine:   {height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(0,0,0,0.15)'},
+  sectionTitle:  {fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 10},
+  sectionLine:   {height: StyleSheet.hairlineWidth, backgroundColor: Colors.border},
 
-  // ── Your original conversation list styles ──
-  convList: {backgroundColor: '#FFFFFF'},
+  // ── Conversation list ──
+  convList: {backgroundColor: Colors.white},
   divider:  {height: StyleSheet.hairlineWidth, backgroundColor: '#E8E8E8', marginLeft: 80},
-  empty:    {textAlign: 'center', color: '#9E9E9E', marginTop: 32, fontSize: 14, lineHeight: 22},
+  empty:    {textAlign: 'center', color: Colors.textSecondary, marginTop: 32, fontSize: 14, lineHeight: 22},
 
-  // ── Your original conversation row styles ──
+  // ── Conversation row ──
   convRow: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
   },
   avatarWrap:    {position: 'relative', marginRight: 12},
-  avatar:        {width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, backgroundColor: '#9E9E9E', alignItems: 'center', justifyContent: 'center'},
-  avatarSupport: {backgroundColor: '#8B7EEE'},
-  avatarText:    {fontSize: 16, fontWeight: '700', color: '#FFFFFF'},
+  avatar:        {width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, alignItems: 'center', justifyContent: 'center'},
+  avatarSupport: {backgroundColor: Colors.primary},
   onlineDot: {
     position: 'absolute', bottom: 2, right: 2,
     width: 11, height: 11, borderRadius: 5.5,
-    backgroundColor: '#2ECC71', borderWidth: 2, borderColor: '#FFFFFF',
+    backgroundColor: Colors.success, borderWidth: 2, borderColor: Colors.white,
   },
   convMiddle: {flex: 1, marginRight: 8},
-  convName:   {fontSize: 14, fontWeight: '700', color: '#000000', marginBottom: 3},
-  convPreview:{fontSize: 13, fontWeight: '400', color: '#7E7E7E'},
-  convPreviewUnread: {fontWeight: '600', color: '#333333'},
+  convName:   {fontSize: 14, fontWeight: '700', color: Colors.text, marginBottom: 3},
+  convPreview:{fontSize: 13, fontWeight: '400', color: Colors.textSecondary},
+  convPreviewUnread: {fontWeight: '600', color: Colors.text},
   convRight:  {alignItems: 'flex-end', gap: 6},
-  convTime:   {fontSize: 11, fontWeight: '400', color: '#7E7E7E'},
-  unreadBadge:{width: 20, height: 20, borderRadius: 10, backgroundColor: '#000000', alignItems: 'center', justifyContent: 'center'},
-  unreadText: {fontSize: 11, fontWeight: '700', color: '#FFFFFF'},
+  convTime:   {fontSize: 11, fontWeight: '400', color: Colors.textSecondary},
+  unreadBadge:{width: 20, height: 20, borderRadius: 10, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center'},
+  unreadText: {fontSize: 11, fontWeight: '700', color: Colors.white},
 
-  // ── New styles for compose modal ──
+  // ── Compose modal ──
   modalOverlay: {flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end'},
   modalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
     padding: 20,
     paddingBottom: Platform.OS === 'ios' ? 36 : 20,
   },
   modalHeader: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20},
-  modalCancel: {fontSize: 15, color: '#7E7E7E'},
-  modalTitle:  {fontSize: 17, fontWeight: '700', color: '#000000'},
-  modalLabel:  {fontSize: 13, fontWeight: '600', color: '#444444', marginBottom: 10},
+  modalCancel: {fontSize: 15, color: Colors.textSecondary},
+  modalTitle:  {fontSize: 17, fontWeight: '700', color: Colors.text},
+  modalLabel:  {fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 10},
   modalSearchRow: {flexDirection: 'row', gap: 10, marginBottom: 16},
   modalInput: {
-    flex: 1, backgroundColor: '#F0F0F0', borderRadius: 12,
+    flex: 1, backgroundColor: Colors.backgroundLight, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 12,
-    fontSize: 14, color: '#000000',
+    fontSize: 14, color: Colors.text,
   },
-  searchBtn:     {backgroundColor: '#8B7EEE', borderRadius: 12, paddingHorizontal: 16, justifyContent: 'center'},
-  searchBtnText: {color: '#FFFFFF', fontWeight: '700', fontSize: 13},
+  searchBtn:     {backgroundColor: Colors.primary, borderRadius: 12, paddingHorizontal: 16, justifyContent: 'center'},
+  searchBtnText: {color: Colors.white, fontWeight: '700', fontSize: 13},
   btnDisabled:   {opacity: 0.6},
-  notFound:      {fontSize: 13, color: '#D87E7E', textAlign: 'center', lineHeight: 20},
+  notFound:      {fontSize: 13, color: Colors.error, textAlign: 'center', lineHeight: 20},
   foundCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F5F3FF', borderRadius: 14,
+    backgroundColor: Colors.backgroundLight, borderRadius: 14,
     padding: 14, gap: 12, marginTop: 8,
   },
-  foundAvatar:     {width: 44, height: 44, borderRadius: 22, backgroundColor: '#9E9E9E', alignItems: 'center', justifyContent: 'center'},
-  foundAvatarText: {fontSize: 15, fontWeight: '700', color: '#FFFFFF'},
   foundInfo:       {flex: 1},
-  foundName:       {fontSize: 15, fontWeight: '700', color: '#000000'},
-  foundHandle:     {fontSize: 12, color: '#7E7E7E', marginTop: 2},
-  startBtn:        {backgroundColor: '#8B7EEE', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8},
-  startBtnText:    {color: '#FFFFFF', fontWeight: '700', fontSize: 13},
+  foundName:       {fontSize: 15, fontWeight: '700', color: Colors.text},
+  foundHandle:     {fontSize: 12, color: Colors.textSecondary, marginTop: 2},
+  startBtn:        {backgroundColor: Colors.primary, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8},
+  startBtnText:    {color: Colors.white, fontWeight: '700', fontSize: 13},
 });
 
 export default PrivateMessagesScreen;

@@ -6,17 +6,17 @@
 import React, {useState, useEffect, useMemo} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, FlatList,
-  StyleSheet, SafeAreaView, StatusBar, ActivityIndicator,
+  StyleSheet, ActivityIndicator,
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
 import {collection, query, where, getDocs} from 'firebase/firestore';
 import {db} from '../config/firebase';
 import {useAuth} from '../context/AuthContext';
+import ScreenHeader from '../components/ScreenHeader';
+import Avatar from '../components/Avatar';
+import {Colors} from '../theme/colors';
 
 interface Friend {uid: string; name: string; handle: string}
-
-const getInitials = (name: string) =>
-  name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase() || '?';
 
 const SearchIcon = () => (
   <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
@@ -85,14 +85,11 @@ const GratitudePortalScreen: React.FC<{navigation: any}> = ({navigation}) => {
   }, [friends, search]);
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#8B7EEE"/>
-
-      {/* Purple header */}
-      <View style={s.header}>
-        <Text style={s.headerTitle}>Send Gratitude</Text>
-        <Text style={s.headerSub}>Pick someone to appreciate today</Text>
-      </View>
+    <View style={s.safe}>
+      <ScreenHeader
+        title="Send Gratitude"
+        onBack={() => navigation.goBack()}
+      />
 
       {/* Search */}
       <View style={s.searchWrap}>
@@ -107,7 +104,7 @@ const GratitudePortalScreen: React.FC<{navigation: any}> = ({navigation}) => {
       </View>
 
       {loading ? (
-        <ActivityIndicator color="#8B7EEE" style={{marginTop: 40}}/>
+        <ActivityIndicator color={Colors.primary} style={{marginTop: 40}}/>
       ) : error ? (
         <View style={s.centred}>
           <Text style={s.errorText}>{error}</Text>
@@ -136,9 +133,7 @@ const GratitudePortalScreen: React.FC<{navigation: any}> = ({navigation}) => {
                   receiverHandle: item.handle,
                 })
               }>
-              <View style={s.avatar}>
-                <Text style={s.avatarText}>{getInitials(item.name)}</Text>
-              </View>
+              <Avatar name={item.name} size={AVATAR_SIZE}/>
               <View style={s.rowInfo}>
                 <Text style={s.rowName}>{item.name}</Text>
                 <Text style={s.rowHandle}>{item.handle}</Text>
@@ -153,46 +148,40 @@ const GratitudePortalScreen: React.FC<{navigation: any}> = ({navigation}) => {
           showsVerticalScrollIndicator={false}
         />
       )}
-    </SafeAreaView>
+    </View>
   );
 };
 
 const AVATAR_SIZE = 52;
 const s = StyleSheet.create({
-  safe: {flex: 1, backgroundColor: '#F5F3FF'},
-
-  header:      {backgroundColor: '#8B7EEE', paddingHorizontal: 22, paddingTop: 14, paddingBottom: 24},
-  headerTitle: {fontSize: 26, fontWeight: '800', color: '#fff', letterSpacing: -0.5},
-  headerSub:   {fontSize: 14, color: 'rgba(255,255,255,0.8)', marginTop: 4},
+  safe: {flex: 1, backgroundColor: Colors.backgroundLight},
 
   searchWrap: {
-    flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff',
+    flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.white,
     borderRadius: 24, marginHorizontal: 16, marginTop: 16, marginBottom: 8,
     paddingHorizontal: 14, paddingVertical: 10, gap: 8,
     shadowColor: '#000', shadowOffset: {width:0,height:1}, shadowOpacity: 0.06, shadowRadius: 3, elevation: 2,
   },
-  searchInput: {flex: 1, fontSize: 14, color: '#000', padding: 0},
+  searchInput: {flex: 1, fontSize: 14, color: Colors.text, padding: 0},
 
   listContent: {paddingHorizontal: 16, paddingTop: 8, paddingBottom: 24},
 
   row: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#fff', borderRadius: 14, padding: 12, gap: 12,
+    backgroundColor: Colors.white, borderRadius: 14, padding: 12, gap: 12,
     shadowColor: '#000', shadowOffset:{width:0,height:1}, shadowOpacity:0.05, shadowRadius:3, elevation:1,
   },
-  avatar:     {width:AVATAR_SIZE, height:AVATAR_SIZE, borderRadius:AVATAR_SIZE/2, backgroundColor:'#A18CE6', alignItems:'center', justifyContent:'center'},
-  avatarText: {fontSize:18, fontWeight:'700', color:'#fff'},
   rowInfo:    {flex:1},
-  rowName:    {fontSize:15, fontWeight:'700', color:'#000'},
-  rowHandle:  {fontSize:12, color:'#7E7E7E', marginTop:2},
-  sendTag:    {backgroundColor:'#F0EEFF', borderRadius:20, paddingHorizontal:12, paddingVertical:6},
-  sendTagText:{fontSize:12, fontWeight:'700', color:'#8B7EEE'},
+  rowName:    {fontSize:15, fontWeight:'700', color: Colors.text},
+  rowHandle:  {fontSize:12, color: Colors.textSecondary, marginTop:2},
+  sendTag:    {backgroundColor: Colors.primaryLight, borderRadius:20, paddingHorizontal:12, paddingVertical:6},
+  sendTagText:{fontSize:12, fontWeight:'700', color: Colors.primaryDark},
 
   centred:      {flex:1, alignItems:'center', justifyContent:'center', padding:24},
-  errorText:    {textAlign:'center', color:'#D87E7E', marginBottom:16, lineHeight:22},
-  retryBtn:     {backgroundColor:'#8B7EEE', borderRadius:12, paddingHorizontal:24, paddingVertical:10},
-  retryBtnText: {color:'#fff', fontWeight:'700'},
-  emptyText:    {textAlign:'center', color:'#9E9E9E', margin:32, lineHeight:22, fontSize:14},
+  errorText:    {textAlign:'center', color: Colors.error, marginBottom:16, lineHeight:22},
+  retryBtn:     {backgroundColor: Colors.primary, borderRadius:12, paddingHorizontal:24, paddingVertical:10},
+  retryBtnText: {color: Colors.white, fontWeight:'700'},
+  emptyText:    {textAlign:'center', color: Colors.textSecondary, margin:32, lineHeight:22, fontSize:14},
 });
 
 export default GratitudePortalScreen;

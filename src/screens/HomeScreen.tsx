@@ -9,7 +9,7 @@
  *  - Mood Analysis chart with M T W T F S S days is fully visible
  */
 
-import React, {useState} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -21,13 +21,28 @@ import {
   SafeAreaView,
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
+import Avatar from '../components/Avatar';
+import MoodFace from '../components/MoodFace';
+import {Colors} from '../theme/colors';
 import {
-  MoodChartIcon,
+  CalendarIcon,
   JournalIcon,
   CommunityIcon,
   SupportIcon,
-  MessagesIcon,
+  GratitudeIcon,
+  MessageBubbleIcon,
 } from '../components/icons/TabIcons';
+import {
+  MoodType,
+  MOOD_OPTIONS,
+  MOOD_COLORS,
+  MOOD_HAPPINESS,
+  saveMood,
+  getMoodForDate,
+  loadWeekMoods,
+  getWeekStart,
+} from '../services/moodService';
+import {getQuoteOfTheDay} from '../constants/quotes';
 
 const {width: SCREEN_WIDTH} = Dimensions.get('window');
 
@@ -56,60 +71,58 @@ export const getFirstName = (fullName?: string | null): string => {
   return sansTitle || nameParts[1] || 'Friend';
 };
 
-// ── Profile icon ──────────────────────────────────────────────────────────────
-
-const ProfileIcon: React.FC<{initial?: string; onPress?: () => void}> = ({initial, onPress}) => (
-  <TouchableOpacity style={styles.profileCircle} onPress={onPress} activeOpacity={0.8}>
-    {initial ? (
-      <Text style={styles.profileInitial}>{initial}</Text>
-    ) : (
-      <>
-        <View style={styles.personHead} />
-        <View style={styles.personBody} />
-      </>
-    )}
-  </TouchableOpacity>
-);
-
 // ── Grid config ────────────────────────────────────────────────────────────────
 
 // 3 columns, 24px side padding each side, 8px gap × 2 between 3 columns
 const TILE_W = Math.floor((SCREEN_WIDTH - 48 - 16) / 3);
-const TILE_H = 100;
+const TILE_H = 82;
 const ICON_SIZE = Math.floor(TILE_W * 0.38);
 
+// 5 mood options in a row, 20px side padding each side, 10px gap × 4 between them
+const MOOD_GAP = 10;
+const MOOD_SIDE_PADDING = 20;
+const MOOD_CIRCLE_SIZE = Math.floor(
+  (SCREEN_WIDTH - MOOD_SIDE_PADDING * 2 - MOOD_GAP * (MOOD_OPTIONS.length - 1)) / MOOD_OPTIONS.length,
+);
+
 const GRID_ITEMS = [
-  {screen: 'Mood',      label: 'Mood Calendar', Icon: MoodChartIcon},
+  {screen: 'Mood',      label: 'Mood Calendar', Icon: CalendarIcon},
   {screen: 'Journal',   label: 'My Journal',    Icon: JournalIcon},
   {screen: 'Community', label: 'Community',     Icon: CommunityIcon},
   {screen: 'Support',   label: 'Get Support',   Icon: SupportIcon},
-  {screen: 'Gratitude', label: 'Gratitude',     Icon: null},   // navigates to GratitudeNavigator
-  {screen: 'Messages',  label: 'Messages',      Icon: MessagesIcon},
+  {screen: 'Gratitude', label: 'Gratitude',     Icon: GratitudeIcon},
+  {screen: 'Messages',  label: 'Messages',      Icon: MessageBubbleIcon},
 ];
 
 // ── Mood chart ─────────────────────────────────────────────────────────────────
 
-const CHART_H = 90;
+const CHART_H = 66;
 const CHART_W = SCREEN_WIDTH - 48;
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
-const WEEKLY_MOOD = [0.25, 0.7, 0.45, 0.6, 0.85, 0.5, 0.35];
+const EMPTY_DOT_Y = 0.5; // baseline height for days with no logged mood
 
-const MoodLineChart: React.FC = () => {
-  const step = CHART_W / (WEEKLY_MOOD.length - 1);
+const MoodLineChart: React.FC<{weekMoods: (MoodType | undefined)[]}> = ({weekMoods}) => {
+  const step = CHART_W / (weekMoods.length - 1);
   const getX = (i: number) => i * step;
   const getY = (val: number) => CHART_H * (1 - val);
 
-  const segments = WEEKLY_MOOD.slice(0, -1).map((_, i) => {
+  const segments: {midX: number; midY: number; length: number; angle: number}[] = [];
+  for (let i = 0; i < weekMoods.length - 1; i++) {
+    const moodA = weekMoods[i];
+    const moodB = weekMoods[i + 1];
+    if (!moodA || !moodB) continue; // only connect days that both have data
     const x1 = getX(i);
-    const y1 = getY(WEEKLY_MOOD[i]);
+    const y1 = getY(MOOD_HAPPINESS[moodA]);
     const x2 = getX(i + 1);
-    const y2 = getY(WEEKLY_MOOD[i + 1]);
+    const y2 = getY(MOOD_HAPPINESS[moodB]);
     const dx = x2 - x1;
     const dy = y2 - y1;
     const length = Math.sqrt(dx * dx + dy * dy);
     const angle = Math.atan2(dy, dx) * (180 / Math.PI);
-    return {midX: (x1 + x2) / 2, midY: (y1 + y2) / 2, length, angle};
-  });
+    segments.push({midX: (x1 + x2) / 2, midY: (y1 + y2) / 2, length, angle});
+  }
+
+  const hasAnyData = weekMoods.some(Boolean);
 
   return (
     <View>
@@ -122,24 +135,24 @@ const MoodLineChart: React.FC = () => {
               position: 'absolute',
               width: seg.length,
               height: 1.5,
-              backgroundColor: '#9E9E9E',
+              backgroundColor: Colors.primaryMedium,
               left: seg.midX - seg.length / 2,
               top: seg.midY,
               transform: [{rotate: `${seg.angle}deg`}],
             }}
           />
         ))}
-        {WEEKLY_MOOD.map((val, i) => (
+        {weekMoods.map((mood, i) => (
           <View
             key={`dt-${i}`}
             style={{
               position: 'absolute',
-              width: 20,
-              height: 20,
+              width: mood ? 20 : 8,
+              height: mood ? 20 : 8,
               borderRadius: 10,
-              backgroundColor: '#7E7E7E',
-              left: getX(i) - 10,
-              top: getY(val) - 10,
+              backgroundColor: mood ? MOOD_COLORS[mood] : Colors.border,
+              left: getX(i) - (mood ? 10 : 4),
+              top: getY(mood ? MOOD_HAPPINESS[mood] : EMPTY_DOT_Y) - (mood ? 10 : 4),
             }}
           />
         ))}
@@ -151,6 +164,12 @@ const MoodLineChart: React.FC = () => {
           <Text key={i} style={styles.dayLabel}>{d}</Text>
         ))}
       </View>
+
+      {!hasAnyData && (
+        <Text style={styles.chartEmptyNote}>
+          Log your mood daily to see your week take shape here.
+        </Text>
+      )}
     </View>
   );
 };
@@ -159,13 +178,37 @@ const MoodLineChart: React.FC = () => {
 
 const HomeScreen = ({navigation}: any) => {
   const {user} = useAuth();
-  const [selectedMood, setSelectedMood] = useState<number | null>(null);
+  const uid = user?.uid ?? 'guest';
   const displayName = user?.name ?? 'Friend';
   const firstName = getFirstName(displayName);
+  const quote = getQuoteOfTheDay();
+
+  const [todayMood,  setTodayMood]  = useState<MoodType | undefined>(undefined);
+  const [weekOffset, setWeekOffset] = useState(0); // 0 = this week, -1 = last week, ...
+  const [weekMoods,  setWeekMoods]  = useState<(MoodType | undefined)[]>(Array(7).fill(undefined));
+
+  const weekStart = getWeekStart(new Date());
+  weekStart.setDate(weekStart.getDate() + weekOffset * 7);
+
+  const refreshWeek = useCallback(() => {
+    loadWeekMoods(uid, weekStart).then(setWeekMoods);
+  }, [uid, weekOffset]);
+
+  useEffect(() => { refreshWeek(); }, [refreshWeek]);
+
+  useEffect(() => {
+    getMoodForDate(uid, new Date()).then(setTodayMood);
+  }, [uid]);
+
+  const handleSelectMood = async (mood: MoodType) => {
+    setTodayMood(mood);
+    await saveMood(uid, new Date(), mood);
+    if (weekOffset === 0) refreshWeek();
+  };
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#CBCBCB" />
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -173,14 +216,15 @@ const HomeScreen = ({navigation}: any) => {
 
         {/* ── Header ── */}
         <View style={styles.header}>
-          <ProfileIcon
-            initial={firstName ? firstName.charAt(0).toUpperCase() : undefined}
-            onPress={() => navigation.navigate('Profile')}
-          />
-          <Text style={styles.greeting}>{getGreeting()}</Text>
-          <Text style={styles.userName}>
-            <Text style={styles.userNameBold}>{firstName}</Text>
-          </Text>
+          <View style={styles.headerTextCol}>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
+            <Text style={styles.userName}>
+              <Text style={styles.userNameBold}>{firstName}</Text>
+            </Text>
+          </View>
+          <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
+            <Avatar name={displayName} size={40} variant="onDark"/>
+          </TouchableOpacity>
         </View>
 
         {/* ── White section ── */}
@@ -188,21 +232,37 @@ const HomeScreen = ({navigation}: any) => {
 
           <View style={styles.divider} />
 
-          {/* Mood picker — plain circles, no emoji */}
+          {/* Mood picker — same mood set as the Mood Calendar, logs today's mood */}
           <Text style={styles.moodPrompt}>How are you feeling today?</Text>
           <View style={styles.moodRow}>
-            {[0, 1, 2, 3, 4].map(i => (
-              <TouchableOpacity
-                key={i}
-                onPress={() => setSelectedMood(i)}
-                activeOpacity={0.8}
-                style={[
-                  styles.moodCircle,
-                  selectedMood === i && styles.moodCircleSelected,
-                ]}
-              />
-            ))}
+            {MOOD_OPTIONS.map(opt => {
+              const isSelected = todayMood === opt.type;
+              return (
+                <TouchableOpacity
+                  key={opt.type}
+                  onPress={() => handleSelectMood(opt.type)}
+                  activeOpacity={0.8}
+                  style={[
+                    styles.moodCircle,
+                    isSelected && styles.moodCircleSelected,
+                  ]}>
+                  <MoodFace mood={opt.type} size={30}/>
+                  {isSelected && (
+                    <View style={styles.moodCheckBadge}>
+                      <Text style={styles.moodCheckMark}>✓</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
           </View>
+          {todayMood && (
+            <Text style={styles.moodSelectedNote}>
+              Today's mood: <Text style={styles.moodSelectedNoteBold}>
+                {MOOD_OPTIONS.find(o => o.type === todayMood)?.label}
+              </Text>
+            </Text>
+          )}
 
           <View style={styles.divider} />
 
@@ -217,7 +277,7 @@ const HomeScreen = ({navigation}: any) => {
                   {/* Icon area */}
                   <View style={styles.tileIconArea}>
                     {item.Icon && (
-                      <item.Icon color="#FFFFFF" size={ICON_SIZE} />
+                      <item.Icon color={Colors.white} size={ICON_SIZE} />
                     )}
                   </View>
                   {/* Label inside tile at bottom */}
@@ -235,18 +295,29 @@ const HomeScreen = ({navigation}: any) => {
         <View style={styles.analysisSection}>
           <Text style={styles.analysisTitle}>Mood Analysis</Text>
           <View style={styles.analysisSubRow}>
-            <Text style={styles.analysisSubtitle}>  This week</Text>
+            <Text style={styles.analysisSubtitle}>
+              {'  '}{weekOffset === 0 ? 'This week' : weekOffset === -1 ? 'Last week' : `${-weekOffset} weeks ago`}
+            </Text>
             <View style={styles.arrowGroup}>
-              <TouchableOpacity style={styles.arrowBtn}>
+              <TouchableOpacity style={styles.arrowBtn} onPress={() => setWeekOffset(w => w - 1)}>
                 <Text style={styles.arrowText}>‹</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={styles.arrowBtn}>
-                <Text style={styles.arrowText}>›</Text>
+              <TouchableOpacity
+                style={styles.arrowBtn}
+                onPress={() => setWeekOffset(w => Math.min(0, w + 1))}
+                disabled={weekOffset === 0}>
+                <Text style={[styles.arrowText, weekOffset === 0 && styles.arrowTextDisabled]}>›</Text>
               </TouchableOpacity>
             </View>
           </View>
-          <MoodLineChart />
-          <View style={{height: 12}} />
+          <MoodLineChart weekMoods={weekMoods}/>
+          <View style={{height: 6}} />
+        </View>
+
+        {/* ── Quote of the Day ── */}
+        <View style={styles.quoteCard}>
+          <Text style={styles.quoteLabel}>Quote of the Day</Text>
+          <Text style={styles.quoteText}>“{quote}”</Text>
         </View>
 
       </ScrollView>
@@ -259,63 +330,37 @@ const HomeScreen = ({navigation}: any) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#CBCBCB',
+    backgroundColor: Colors.primary,
   },
   scroll: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background,
   },
 
   // ── Header ──
   header: {
-    backgroundColor: '#CBCBCB',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 18,
-  },
-
-  // Profile icon drawn with Views — no emoji
-  profileCircle: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: '#9E9E9E',
+    backgroundColor: Colors.primary,
+    flexDirection: 'row',
     alignItems: 'center',
-    overflow: 'hidden',
-    marginBottom: 10,
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingTop: 14,
+    paddingBottom: 14,
   },
-  personHead: {
-    position: 'absolute',
-    top: 6,
-    width: 13,
-    height: 13,
-    borderRadius: 6.5,
-    backgroundColor: 'rgba(255,255,255,0.85)',
-  },
-  personBody: {
-    position: 'absolute',
-    bottom: -10,
-    width: 28,
-    height: 20,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255,255,255,0.85)',
-  },
-  profileInitial: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#FFFFFF',
+  headerTextCol: {
+    flexShrink: 1,
   },
 
   greeting: {
     fontSize: 20,
     fontWeight: '400',
-    color: '#000000',
+    color: Colors.white,
     lineHeight: 28,
   },
   userName: {
     fontSize: 20,
     fontWeight: '400',
-    color: '#000000',
+    color: Colors.white,
     lineHeight: 28,
   },
   userNameBold: {
@@ -324,39 +369,75 @@ const styles = StyleSheet.create({
 
   // ── White section ──
   whiteSection: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.background,
+    paddingBottom: 6,
   },
   divider: {
     height: 1,
-    backgroundColor: '#000000',
+    backgroundColor: Colors.border,
     marginHorizontal: 24,
   },
 
-  // ── Mood picker — plain circles ──
+  // ── Mood picker — same faces as the Mood Calendar ──
   moodPrompt: {
     textAlign: 'center',
     fontSize: 14,
     fontWeight: '500',
-    color: '#000000',
+    color: Colors.text,
     marginTop: 12,
     marginBottom: 10,
   },
   moodRow: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: 20,
-    marginBottom: 12,
+    gap: MOOD_GAP,
+    paddingHorizontal: MOOD_SIDE_PADDING,
+    marginBottom: 6,
   },
   moodCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
-    backgroundColor: '#D9D9D9',
+    width: MOOD_CIRCLE_SIZE,
+    height: MOOD_CIRCLE_SIZE,
+    borderRadius: MOOD_CIRCLE_SIZE / 2,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
   },
   moodCircleSelected: {
-    backgroundColor: '#A18CE6',
-    transform: [{scale: 1.1}],
+    backgroundColor: Colors.primary,
+    borderWidth: 2,
+    borderColor: Colors.white,
+    transform: [{scale: 1.08}],
+  },
+  moodCheckBadge: {
+    position: 'absolute',
+    top: -3,
+    right: -3,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: Colors.success,
+    borderWidth: 1.5,
+    borderColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moodCheckMark: {
+    fontSize: 9,
+    lineHeight: 11,
+    color: Colors.white,
+    fontWeight: '700',
+  },
+  moodSelectedNote: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+    marginBottom: 10,
+  },
+  moodSelectedNoteBold: {
+    color: Colors.primaryDark,
+    fontWeight: '700',
   },
 
   // ── Grid — labels inside tiles ──
@@ -364,15 +445,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     paddingHorizontal: 24,
-    paddingTop: 10,
-    paddingBottom: 14,
+    paddingTop: 8,
+    paddingBottom: 10,
     gap: 8,
   },
   tileBox: {
     width: TILE_W,
     height: TILE_H,
-    backgroundColor: '#D9D9D9',
-    borderRadius: 10,
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
     overflow: 'hidden',
     alignItems: 'center',
   },
@@ -383,22 +464,23 @@ const styles = StyleSheet.create({
   },
   tileLabel: {
     fontSize: 10,
-    fontWeight: '500',
-    color: '#000000',
-    paddingBottom: 7,
+    fontWeight: '600',
+    color: Colors.white,
+    paddingBottom: 6,
     paddingHorizontal: 4,
     textAlign: 'center',
   },
 
   // ── Mood Analysis ──
   analysisSection: {
-    backgroundColor: '#E9E9E9',
-    paddingTop: 12,
+    backgroundColor: Colors.backgroundLight,
+    paddingTop: 10,
+    paddingBottom: 8,
   },
   analysisTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#000000',
+    color: Colors.text,
     paddingHorizontal: 16,
   },
   analysisSubRow: {
@@ -412,7 +494,7 @@ const styles = StyleSheet.create({
   analysisSubtitle: {
     fontSize: 13,
     fontWeight: '400',
-    color: '#000000',
+    color: Colors.textSecondary,
   },
   arrowGroup: {
     flexDirection: 'row',
@@ -423,8 +505,11 @@ const styles = StyleSheet.create({
   },
   arrowText: {
     fontSize: 22,
-    color: '#000000',
+    color: Colors.primary,
     fontWeight: '300',
+  },
+  arrowTextDisabled: {
+    color: Colors.border,
   },
 
   // Chart days
@@ -437,9 +522,43 @@ const styles = StyleSheet.create({
   dayLabel: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#000000',
+    color: Colors.textSecondary,
     width: 18,
     textAlign: 'center',
+  },
+  chartEmptyNote: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginTop: 10,
+    paddingHorizontal: 32,
+  },
+
+  // ── Quote of the Day ──
+  quoteCard: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 16,
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 20,
+    padding: 16,
+    borderLeftWidth: 4,
+    borderLeftColor: Colors.primary,
+  },
+  quoteLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.primaryDark,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  quoteText: {
+    fontSize: 15,
+    fontWeight: '500',
+    fontStyle: 'italic',
+    color: Colors.text,
+    lineHeight: 22,
   },
 });
 

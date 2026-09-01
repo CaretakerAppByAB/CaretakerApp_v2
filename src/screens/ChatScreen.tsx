@@ -8,15 +8,19 @@
 import React, {useState, useEffect, useRef, useMemo} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, SafeAreaView, StatusBar, KeyboardAvoidingView,
+  StyleSheet, KeyboardAvoidingView,
   Platform, ActivityIndicator,
 } from 'react-native';
-import Svg, {Path, Circle} from 'react-native-svg';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import Svg, {Path} from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useAuth} from '../context/AuthContext';
 import {EnvelopeOpenIcon} from '../components/icons/TabIcons';
 import ThankYouNoteOverlay from '../components/ThankYouNoteOverlay';
 import PHIWarningBanner from '../components/PHIWarningBanner';
+import ScreenHeader from '../components/ScreenHeader';
+import Avatar from '../components/Avatar';
+import {Colors} from '../theme/colors';
 import {detectPHI, redactPHI} from '../services/phiDetection';
 import {
   subscribeToMessages, sendMessage, markConversationRead, Message,
@@ -24,31 +28,18 @@ import {
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
-const BackArrow = () => (
-  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-    <Path d="M19 12H5M12 19l-7-7 7-7" stroke="#000" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
-  </Svg>
-);
-
-const InfoIcon = () => (
-  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
-    <Circle cx={12} cy={12} r={10} stroke="#555" strokeWidth={1.5}/>
-    <Path d="M12 16v-4M12 8h.01" stroke="#555" strokeWidth={1.8} strokeLinecap="round"/>
-  </Svg>
-);
-
 const SendIcon = ({active}: {active: boolean}) => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
     <Path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"
-      stroke={active ? '#8B7EEE' : '#BBBBBB'} strokeWidth={1.8}
+      stroke={active ? Colors.primary : '#BBBBBB'} strokeWidth={1.8}
       strokeLinecap="round" strokeLinejoin="round"/>
   </Svg>
 );
 
 const LockIcon = () => (
   <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
-    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke="#8B7EEE" strokeWidth={2}/>
-    <Path d="M7 11V7a5 5 0 0110 0v4" stroke="#8B7EEE" strokeWidth={2} strokeLinecap="round"/>
+    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke={Colors.overlayLight} strokeWidth={2}/>
+    <Path d="M7 11V7a5 5 0 0110 0v4" stroke={Colors.overlayLight} strokeWidth={2} strokeLinecap="round"/>
   </Svg>
 );
 
@@ -62,7 +53,7 @@ const SEEN_KEY = (noteId: string) => `@alz_note_seen_${noteId}`;
 const ThankYouNoteBubble: React.FC<{msg: Message; isMine: boolean}> = ({msg, isMine}) => (
   <View style={[s.bubbleWrap, isMine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
     <View style={s.thankYouCard}>
-      <EnvelopeOpenIcon size={52} color="#A18CE6"/>
+      <EnvelopeOpenIcon size={52} color={Colors.primaryMedium}/>
       <Text style={s.thankYouLabel}>Thank You Note</Text>
       {!!msg.text && <Text style={s.thankYouPreview} numberOfLines={2}>{msg.text}</Text>}
     </View>
@@ -80,7 +71,7 @@ interface PendingNote {noteId: string; message: string; senderName: string}
 const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}) => {
   const {user} = useAuth();
   const {
-    conversationId = '', name = 'Chat', initials = '?',
+    conversationId = '', name = 'Chat',
     receiverId = '', online = false,
   } = route?.params ?? {};
 
@@ -91,6 +82,7 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
   const [pendingNote,  setPendingNote]  = useState<PendingNote | null>(null);
   const [phiDismissed, setPhiDismissed] = useState(false);
   const scrollRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   // ── PHI detection on the draft message ──────────────────────────────────────
   const phiMatches = useMemo(() => {
@@ -172,9 +164,7 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
   };
 
   return (
-    <SafeAreaView style={s.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff"/>
-
+    <View style={s.safe}>
       <ThankYouNoteOverlay
         visible={!!pendingNote}
         message={pendingNote?.message ?? ''}
@@ -182,22 +172,22 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
         onClose={handleCloseNote}
       />
 
-      {/* Header */}
-      <View style={s.header}>
-        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <BackArrow/>
-        </TouchableOpacity>
-        <View style={s.avatarCircle}><Text style={s.avatarText}>{initials}</Text></View>
-        <View style={s.headerInfo}>
-          <Text style={s.headerName} numberOfLines={1}>{name}</Text>
-          <View style={s.encRow}>
-            <LockIcon/>
-            <Text style={s.encText}>End-to-end encrypted</Text>
+      <ScreenHeader
+        title={name}
+        onBack={() => navigation.goBack()}
+        titleSlot={
+          <View style={s.headerTitleSlot}>
+            <Avatar name={name} size={36} variant="onDark"/>
+            <View style={s.headerTitleText}>
+              <Text style={s.headerName} numberOfLines={1}>{name}</Text>
+              <View style={s.encRow}>
+                <LockIcon/>
+                <Text style={s.encText}>End-to-end encrypted</Text>
+              </View>
+            </View>
           </View>
-        </View>
-        <TouchableOpacity style={s.infoBtn} activeOpacity={0.7}><InfoIcon/></TouchableOpacity>
-      </View>
-      <View style={s.divider}/>
+        }
+      />
 
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
@@ -208,7 +198,7 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
 
           <View style={s.dateSep}><Text style={s.dateSepText}>Today</Text></View>
 
-          {loading && <ActivityIndicator color="#8B7EEE" style={{marginTop:20}}/>}
+          {loading && <ActivityIndicator color={Colors.primary} style={{marginTop:20}}/>}
           {!loading && messages.length === 0 && (
             <Text style={s.empty}>Send a message to start the conversation.</Text>
           )}
@@ -247,7 +237,7 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
         )}
 
         {/* Input bar */}
-        <View style={s.inputBar}>
+        <View style={[s.inputBar, {paddingBottom: 10 + insets.bottom}]}>
           <TouchableOpacity style={s.addBtn} activeOpacity={0.7}>
             <Text style={s.addBtnText}>+</Text>
           </TouchableOpacity>
@@ -270,35 +260,30 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
               activeOpacity={0.7}
               disabled={!inputText.trim() || sending}>
               {sending
-                ? <ActivityIndicator size="small" color="#8B7EEE"/>
+                ? <ActivityIndicator size="small" color={Colors.primary}/>
                 : <SendIcon active={!!inputText.trim()}/>
               }
             </TouchableOpacity>
           </View>
         </View>
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  safe: {flex:1, backgroundColor:'#fff'},
+  safe: {flex:1, backgroundColor: Colors.white},
   flex: {flex:1},
 
-  header:       {flexDirection:'row', alignItems:'center', paddingHorizontal:12, paddingVertical:10, backgroundColor:'#fff', gap:10},
-  backBtn:      {padding:6},
-  avatarCircle: {width:42, height:42, borderRadius:21, backgroundColor:'#9E9E9E', alignItems:'center', justifyContent:'center'},
-  avatarText:   {fontSize:15, fontWeight:'700', color:'#fff'},
-  headerInfo:   {flex:1},
-  headerName:   {fontSize:15, fontWeight:'700', color:'#000'},
-  encRow:       {flexDirection:'row', alignItems:'center', gap:4, marginTop:2},
-  encText:      {fontSize:10, color:'#8B7EEE', fontWeight:'600'},
-  infoBtn:      {padding:6},
-  divider:      {height:StyleSheet.hairlineWidth, backgroundColor:'rgba(0,0,0,0.12)'},
+  headerTitleSlot: {flexDirection:'row', alignItems:'center', gap:8},
+  headerTitleText: {},
+  headerName:      {fontSize:15, fontWeight:'700', color: Colors.white},
+  encRow:          {flexDirection:'row', alignItems:'center', gap:4, marginTop:2},
+  encText:         {fontSize:10, color: Colors.overlayLight, fontWeight:'600'},
 
-  msgList:    {flex:1, backgroundColor:'#fff'},
+  msgList:    {flex:1, backgroundColor: Colors.white},
   msgContent: {padding:16, paddingBottom:12},
   dateSep:    {alignItems:'center', marginBottom:20},
   dateSepText:{fontSize:12, color:'#9E9E9E', fontWeight:'500'},
@@ -311,11 +296,11 @@ const s = StyleSheet.create({
   bubbleMine:       {backgroundColor:'#000', borderTopRightRadius:4},
   bubbleTheirs:     {backgroundColor:'#E8E8E8', borderTopLeftRadius:4},
   bubbleText:       {fontSize:14, lineHeight:20},
-  bubbleTextMine:   {color:'#fff'},
-  bubbleTextTheirs: {color:'#000'},
+  bubbleTextMine:   {color: Colors.white},
+  bubbleTextTheirs: {color: Colors.text},
 
   thankYouCard:    {backgroundColor:'#000', borderRadius:18, borderTopRightRadius:4, padding:20, alignItems:'center', width:190},
-  thankYouLabel:   {color:'#fff', fontSize:14, fontWeight:'700', marginTop:10},
+  thankYouLabel:   {color: Colors.white, fontSize:14, fontWeight:'700', marginTop:10},
   thankYouPreview: {color:'rgba(255,255,255,0.65)', fontSize:12, marginTop:4, textAlign:'center'},
 
   meta:     {flexDirection:'row', alignItems:'center', gap:4, marginTop:4, marginHorizontal:2},
@@ -323,11 +308,11 @@ const s = StyleSheet.create({
   metaTime: {fontSize:11, color:'#9E9E9E'},
   checks:   {fontSize:11, color:'#9E9E9E'},
 
-  inputBar:   {flexDirection:'row', alignItems:'flex-end', paddingHorizontal:12, paddingVertical:10, backgroundColor:'#fff', borderTopWidth:StyleSheet.hairlineWidth, borderTopColor:'rgba(0,0,0,0.1)', gap:10},
+  inputBar:   {flexDirection:'row', alignItems:'flex-end', paddingHorizontal:12, paddingVertical:10, backgroundColor: Colors.white, borderTopWidth:StyleSheet.hairlineWidth, borderTopColor:'rgba(0,0,0,0.1)', gap:10},
   addBtn:     {width:40, height:40, borderRadius:20, backgroundColor:'#E8E8E8', alignItems:'center', justifyContent:'center', marginBottom:2},
   addBtnText: {fontSize:24, fontWeight:'300', color:'#555', lineHeight:28},
   inputPill:  {flex:1, flexDirection:'row', alignItems:'flex-end', backgroundColor:'#F0F0F0', borderRadius:24, paddingHorizontal:14, paddingVertical:8, gap:8, minHeight:44},
-  input:      {flex:1, fontSize:14, color:'#000', maxHeight:100, padding:0, lineHeight:20},
+  input:      {flex:1, fontSize:14, color: Colors.text, maxHeight:100, padding:0, lineHeight:20},
   sendBtn:    {marginBottom:2},
 });
 

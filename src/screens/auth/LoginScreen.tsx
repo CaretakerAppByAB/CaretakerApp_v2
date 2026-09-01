@@ -10,20 +10,21 @@ import {
 } from 'react-native';
 import Svg, {Path, Circle, G} from 'react-native-svg';
 import {useAuth} from '../../context/AuthContext';
+import {Colors} from '../../theme/colors';
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
 const PersonIcon = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-    <Path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="#8B7EEE" strokeWidth={1.8} strokeLinecap="round"/>
-    <Circle cx={12} cy={7} r={4} stroke="#8B7EEE" strokeWidth={1.8}/>
+    <Path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke={Colors.primary} strokeWidth={1.8} strokeLinecap="round"/>
+    <Circle cx={12} cy={7} r={4} stroke={Colors.primary} strokeWidth={1.8}/>
   </Svg>
 );
 
 const LockIcon = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke="#8B7EEE" strokeWidth={1.8}/>
-    <Path d="M7 11V7a5 5 0 0110 0v4" stroke="#8B7EEE" strokeWidth={1.8} strokeLinecap="round"/>
+    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke={Colors.primary} strokeWidth={1.8}/>
+    <Path d="M7 11V7a5 5 0 0110 0v4" stroke={Colors.primary} strokeWidth={1.8} strokeLinecap="round"/>
   </Svg>
 );
 
@@ -31,13 +32,13 @@ const LockIcon = () => (
 
 const CaregiverIllustration = () => (
   <Svg width={100} height={100} viewBox="0 0 100 100">
-    <Circle cx={50} cy={50} r={50} fill="#EDE9FF"/>
+    <Circle cx={50} cy={50} r={50} fill={Colors.primaryLight}/>
     {/* Person 1 (caregiver) */}
-    <Circle cx={38} cy={32} r={12} fill="#8B7EEE"/>
-    <Path d="M20 70 Q38 55 56 70" fill="#8B7EEE"/>
+    <Circle cx={38} cy={32} r={12} fill={Colors.primary}/>
+    <Path d="M20 70 Q38 55 56 70" fill={Colors.primary}/>
     {/* Person 2 (loved one, smaller) */}
-    <Circle cx={62} cy={38} r={9} fill="#A18CE6"/>
-    <Path d="M48 72 Q62 60 76 72" fill="#A18CE6"/>
+    <Circle cx={62} cy={38} r={9} fill={Colors.primaryMedium}/>
+    <Path d="M48 72 Q62 60 76 72" fill={Colors.primaryMedium}/>
     {/* Heart */}
     <Path
       d="M50 48 C48 44 43 44 43 48 C43 52 50 57 50 57 C50 57 57 52 57 48 C57 44 52 44 50 48Z"
@@ -186,7 +187,7 @@ const s = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0EEFF',
+    backgroundColor: Colors.cardBackground,
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -197,10 +198,10 @@ const s = StyleSheet.create({
   input: {flex: 1, fontSize: 15, color: '#000', padding: 0},
 
   forgotWrap: {alignSelf: 'flex-end', marginBottom: 20},
-  forgotText: {fontSize: 13, color: '#8B7EEE'},
+  forgotText: {fontSize: 13, color: Colors.primary},
 
   loginBtn: {
-    backgroundColor: '#8B7EEE',
+    backgroundColor: Colors.primary,
     borderRadius: 28,
     paddingVertical: 16,
     width: '100%',
@@ -213,7 +214,7 @@ const s = StyleSheet.create({
   signupRow:     {flexDirection: 'row', alignItems: 'center', marginBottom: 24},
   signupText:    {fontSize: 14, color: '#555555'},
   signupPill:    {backgroundColor: '#EDE9FF', borderRadius: 16, paddingHorizontal: 14, paddingVertical: 6},
-  signupPillText:{fontSize: 13, fontWeight: '700', color: '#8B7EEE'},
+  signupPillText:{fontSize: 13, fontWeight: '700', color: Colors.primary},
 
   dividerRow: {flexDirection: 'row', alignItems: 'center', width: '100%', marginBottom: 20, gap: 10},
   dividerLine:{flex: 1, height: StyleSheet.hairlineWidth, backgroundColor: '#CCCCCC'},

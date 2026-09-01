@@ -10,7 +10,7 @@ export const Colors = {
 
   // Backgrounds
   background: '#FFFFFF',
-  backgroundLight: '#F7F5FF', // Very soft lavender page background
+  backgroundLight: '#F5F3FF', // Very soft lavender page background
 
   // Text
   text: '#1E1B3A',           // Almost-black indigo for readability
@@ -20,6 +20,13 @@ export const Colors = {
   white: '#FFFFFF',
   border: '#DDD9FF',
   cardBackground: '#F0EEFF',
+
+  // Header buttons / controls sitting on a purple bar
+  overlayButton: 'rgba(255,255,255,0.2)',
+  overlayLight: 'rgba(255,255,255,0.85)',
+
+  // Bottom tab bar
+  tabInactive: '#9E9E9E',
 
   // Semantic
   success: '#10B981',

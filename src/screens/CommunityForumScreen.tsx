@@ -21,10 +21,13 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import Svg, {Path, Circle} from 'react-native-svg';
+import Svg, {Path} from 'react-native-svg';
 import {useAuth} from '../context/AuthContext';
 import {detectPHI, redactPHI} from '../services/phiDetection';
 import PHIWarningBanner from '../components/PHIWarningBanner';
+import ScreenHeader from '../components/ScreenHeader';
+import Avatar from '../components/Avatar';
+import {Colors} from '../theme/colors';
 import {
   subscribeToPosts,
   createPost,
@@ -42,8 +45,8 @@ const HeartIcon: React.FC<{filled: boolean; size?: number}> = ({filled, size = 2
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
     <Path
       d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
-      fill={filled ? '#8B7EEE' : 'none'}
-      stroke={filled ? '#8B7EEE' : '#7E7E7E'}
+      fill={filled ? Colors.primary : 'none'}
+      stroke={filled ? Colors.primary : Colors.textSecondary}
       strokeWidth={1.5}
     />
   </Svg>
@@ -67,23 +70,6 @@ const PlusIcon: React.FC = () => (
   </Svg>
 );
 
-// ── Avatar ─────────────────────────────────────────────────────────────────────
-
-const Avatar: React.FC<{name: string}> = ({name}) => {
-  const initials = name
-    .split(' ')
-    .map(w => w[0] ?? '')
-    .join('')
-    .slice(0, 2)
-    .toUpperCase() || '?';
-
-  return (
-    <View style={s.avatar}>
-      <Text style={s.avatarText}>{initials}</Text>
-    </View>
-  );
-};
-
 // ── Post card ──────────────────────────────────────────────────────────────────
 
 interface PostCardProps {
@@ -95,7 +81,7 @@ interface PostCardProps {
 const PostCard: React.FC<PostCardProps> = ({post, liked, onLike}) => (
   <View style={s.card}>
     <View style={s.cardHeader}>
-      <Avatar name={post.authorName}/>
+      <Avatar name={post.authorName} size={AVATAR_SIZE}/>
       <View style={s.authorInfo}>
         <Text style={s.authorName}>{post.authorName}</Text>
         <Text style={s.authorHandle}>{post.authorHandle}</Text>
@@ -222,7 +208,7 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
 
           {/* Author preview */}
           <View style={s.modalAuthorRow}>
-            <Avatar name={authorName}/>
+            <Avatar name={authorName} size={AVATAR_SIZE}/>
             <View>
               <Text style={s.modalAuthorName}>{authorName}</Text>
               <Text style={s.modalAuthorSub}>Sharing with the community</Text>
@@ -383,6 +369,7 @@ const CommunityForumScreen: React.FC = () => {
 
   return (
     <View style={s.screen}>
+      <ScreenHeader title="Community"/>
 
       {/* Tab strip */}
       <View style={s.tabStrip}>
@@ -404,7 +391,7 @@ const CommunityForumScreen: React.FC = () => {
       {/* Content */}
       {loading ? (
         <View style={s.centred}>
-          <ActivityIndicator size="large" color="#8B7EEE"/>
+          <ActivityIndicator size="large" color={Colors.primary}/>
           <Text style={s.loadingText}>Loading posts…</Text>
         </View>
       ) : error ? (
@@ -457,25 +444,25 @@ const CommunityForumScreen: React.FC = () => {
 const AVATAR_SIZE = 42;
 
 const s = StyleSheet.create({
-  screen: {flex: 1, backgroundColor: '#F5F3FF'},
+  screen: {flex: 1, backgroundColor: Colors.backgroundLight},
 
   // Tab strip
   tabStrip: {
     flexDirection: 'row',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     paddingHorizontal: 16,
   },
   tabItem: {
     flex: 1, alignItems: 'center', paddingVertical: 12, position: 'relative',
   },
-  tabLabel: {fontSize: 14, fontWeight: '500', color: '#7E7E7E'},
-  tabLabelActive: {color: '#000000', fontWeight: '700'},
+  tabLabel: {fontSize: 14, fontWeight: '500', color: Colors.textSecondary},
+  tabLabelActive: {color: Colors.primary, fontWeight: '700'},
   tabIndicator: {
     position: 'absolute', bottom: 0, width: '60%',
-    height: 2, backgroundColor: '#000000', borderRadius: 1,
+    height: 2, backgroundColor: Colors.primary, borderRadius: 1,
   },
   tabDivider: {
-    height: StyleSheet.hairlineWidth, backgroundColor: 'rgba(0,0,0,0.15)',
+    height: StyleSheet.hairlineWidth, backgroundColor: Colors.border,
   },
 
   // Feed
@@ -484,51 +471,45 @@ const s = StyleSheet.create({
 
   // States
   centred: {flex: 1, alignItems: 'center', justifyContent: 'center', padding: 24},
-  loadingText: {marginTop: 12, fontSize: 14, color: '#7E7E7E'},
-  errorText: {fontSize: 14, color: '#D87E7E', textAlign: 'center', lineHeight: 22},
-  emptyText: {textAlign: 'center', color: '#9E9E9E', fontSize: 14, marginTop: 40, lineHeight: 22},
+  loadingText: {marginTop: 12, fontSize: 14, color: Colors.textSecondary},
+  errorText: {fontSize: 14, color: Colors.error, textAlign: 'center', lineHeight: 22},
+  emptyText: {textAlign: 'center', color: Colors.textSecondary, fontSize: 14, marginTop: 40, lineHeight: 22},
 
   // Post card
   card: {
-    backgroundColor: '#E8E8E8', borderRadius: 14,
+    backgroundColor: Colors.cardBackground, borderRadius: 14,
     padding: 14, marginBottom: 12,
   },
   cardHeader: {
     flexDirection: 'row', alignItems: 'center', marginBottom: 10,
   },
-  avatar: {
-    width: AVATAR_SIZE, height: AVATAR_SIZE,
-    borderRadius: AVATAR_SIZE / 2, backgroundColor: '#9E9E9E',
-    alignItems: 'center', justifyContent: 'center', marginRight: 10,
-  },
-  avatarText: {fontSize: 16, fontWeight: '700', color: '#FFFFFF'},
-  authorInfo: {flex: 1},
-  authorName: {fontSize: 14, fontWeight: '700', color: '#000000'},
-  authorHandle: {fontSize: 12, color: '#555555', marginTop: 1},
+  authorInfo: {flex: 1, marginLeft: 10},
+  authorName: {fontSize: 14, fontWeight: '700', color: Colors.text},
+  authorHandle: {fontSize: 12, color: Colors.textSecondary, marginTop: 1},
   eventBadge: {
-    backgroundColor: '#8B7EEE', borderRadius: 8,
+    backgroundColor: Colors.primary, borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 2, marginRight: 6,
   },
-  eventBadgeText: {fontSize: 10, fontWeight: '700', color: '#FFFFFF'},
+  eventBadgeText: {fontSize: 10, fontWeight: '700', color: Colors.white},
   shareBtn: {marginLeft: 4},
   shareBtnInner: {
     width: 30, height: 30, borderRadius: 15,
-    backgroundColor: '#9E9E9E', alignItems: 'center', justifyContent: 'center',
+    backgroundColor: Colors.primaryMedium, alignItems: 'center', justifyContent: 'center',
   },
-  content: {fontSize: 13, lineHeight: 20, color: '#1A1A1A', marginBottom: 12},
+  content: {fontSize: 13, lineHeight: 20, color: Colors.text, marginBottom: 12},
   cardFooter: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
   likeRow: {flexDirection: 'row', alignItems: 'center', gap: 6},
-  likeCount: {fontSize: 14, fontWeight: '600', color: '#7E7E7E'},
-  likeCountActive: {color: '#8B7EEE'},
-  commentCount: {fontSize: 13, fontWeight: '500', color: '#555555'},
+  likeCount: {fontSize: 14, fontWeight: '600', color: Colors.textSecondary},
+  likeCountActive: {color: Colors.primary},
+  commentCount: {fontSize: 13, fontWeight: '500', color: Colors.textSecondary},
 
   // FAB
   fab: {
     position: 'absolute', bottom: 90, right: 20,
     width: 56, height: 56, borderRadius: 28,
-    backgroundColor: '#8B7EEE',
+    backgroundColor: Colors.primary,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOffset: {width: 0, height: 4},
     shadowOpacity: 0.25, shadowRadius: 8, elevation: 8,
@@ -540,7 +521,7 @@ const s = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderTopLeftRadius: 20, borderTopRightRadius: 20,
     padding: 20,
     paddingBottom: Platform.OS === 'ios' ? 36 : 20,
@@ -550,22 +531,22 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center',
     justifyContent: 'space-between', marginBottom: 20,
   },
-  modalCancel: {fontSize: 15, color: '#7E7E7E'},
-  modalTitle: {fontSize: 17, fontWeight: '700', color: '#000000'},
+  modalCancel: {fontSize: 15, color: Colors.textSecondary},
+  modalTitle: {fontSize: 17, fontWeight: '700', color: Colors.text},
   postBtn: {
-    backgroundColor: '#8B7EEE', borderRadius: 20,
+    backgroundColor: Colors.primary, borderRadius: 20,
     paddingHorizontal: 16, paddingVertical: 7,
     minWidth: 56, alignItems: 'center',
   },
   postBtnDisabled: {opacity: 0.5},
-  postBtnText: {fontSize: 14, fontWeight: '700', color: '#FFFFFF'},
+  postBtnText: {fontSize: 14, fontWeight: '700', color: Colors.white},
   modalAuthorRow: {
     flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16,
   },
-  modalAuthorName: {fontSize: 14, fontWeight: '700', color: '#000000'},
-  modalAuthorSub: {fontSize: 12, color: '#7E7E7E', marginTop: 2},
+  modalAuthorName: {fontSize: 14, fontWeight: '700', color: Colors.text},
+  modalAuthorSub: {fontSize: 12, color: Colors.textSecondary, marginTop: 2},
   modalInput: {
-    fontSize: 15, color: '#000000', lineHeight: 22,
+    fontSize: 15, color: Colors.text, lineHeight: 22,
     minHeight: 120, textAlignVertical: 'top',
   },
   charCount: {
@@ -577,17 +558,17 @@ const s = StyleSheet.create({
   },
   publicNoticeText: {fontSize: 11, color: '#2C5A8F', lineHeight: 16},
   tabSelectorLabel: {
-    fontSize: 13, fontWeight: '600', color: '#555555',
+    fontSize: 13, fontWeight: '600', color: Colors.textSecondary,
     marginTop: 16, marginBottom: 8,
   },
   tabSelector: {flexDirection: 'row', gap: 8},
   tabOption: {
     paddingHorizontal: 16, paddingVertical: 7,
-    borderRadius: 20, backgroundColor: '#F0F0F0',
+    borderRadius: 20, backgroundColor: Colors.backgroundLight,
   },
-  tabOptionActive: {backgroundColor: '#8B7EEE'},
-  tabOptionText: {fontSize: 13, fontWeight: '500', color: '#555555'},
-  tabOptionTextActive: {color: '#FFFFFF', fontWeight: '700'},
+  tabOptionActive: {backgroundColor: Colors.primary},
+  tabOptionText: {fontSize: 13, fontWeight: '500', color: Colors.textSecondary},
+  tabOptionTextActive: {color: Colors.white, fontWeight: '700'},
 });
 
 export default CommunityForumScreen;

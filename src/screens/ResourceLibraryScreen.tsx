@@ -23,6 +23,7 @@ import {
   Alert,
 } from 'react-native';
 import {Colors} from '../theme/colors';
+import ScreenHeader from '../components/ScreenHeader';
 
 // ── Data structure (for developers) ──────────────────────────────────────────
 // When populating the real library, each resource should have this shape:
@@ -47,10 +48,12 @@ const ResourceLibraryScreen = () => {
     );
 
   return (
-    <ScrollView
-      style={styles.scroll}
-      contentContainerStyle={styles.container}
-      showsVerticalScrollIndicator={false}>
+    <View style={styles.screen}>
+      <ScreenHeader title="Support"/>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.container}
+        showsVerticalScrollIndicator={false}>
 
       {/* ── Under development banner ── */}
       <View style={styles.devBanner}>
@@ -111,13 +114,15 @@ const ResourceLibraryScreen = () => {
           {'• region field ready for geo-filtering — hook into user profile'}
         </Text>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  screen: {flex: 1, backgroundColor: Colors.backgroundLight},
   scroll: {flex: 1, backgroundColor: Colors.backgroundLight},
   container: {padding: 16, paddingBottom: 40},
 

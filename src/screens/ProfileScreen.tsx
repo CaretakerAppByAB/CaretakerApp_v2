@@ -7,14 +7,16 @@ import {
   View, Text, TouchableOpacity, ScrollView,
   StyleSheet, SafeAreaView, StatusBar, Alert,
 } from 'react-native';
-import Svg, {Path, Circle, Bell, Settings} from 'react-native-svg';
+import Svg, {Path} from 'react-native-svg';
 import {useAuth} from '../context/AuthContext';
+import Avatar from '../components/Avatar';
+import {Colors} from '../theme/colors';
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
 const MenuIcon: React.FC<{d: string}> = ({d}) => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-    <Path d={d} stroke="#555555" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
+    <Path d={d} stroke={Colors.textSecondary} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
   </Svg>
 );
 
@@ -24,8 +26,11 @@ const ChevronRight = () => (
   </Svg>
 );
 
-const getInitials = (name: string) =>
-  name.split(' ').map(w => w[0] ?? '').join('').slice(0, 2).toUpperCase() || '?';
+const BackChevron = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path d="M15 18l-6-6 6-6" stroke={Colors.white} strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round"/>
+  </Svg>
+);
 
 // ── Menu item ──────────────────────────────────────────────────────────────────
 
@@ -89,11 +94,18 @@ const ProfileScreen: React.FC<{navigation: any}> = ({navigation}) => {
 
   return (
     <SafeAreaView style={ps.safe}>
-      <StatusBar barStyle="light-content" backgroundColor="#8B7EEE"/>
+      <StatusBar barStyle="light-content" backgroundColor={Colors.primary}/>
       <ScrollView showsVerticalScrollIndicator={false}>
 
         {/* ── Cover banner ── */}
         <View style={ps.coverBanner}>
+          <TouchableOpacity
+            style={ps.backBtn}
+            onPress={() => navigation.navigate('Home')}
+            activeOpacity={0.7}
+            hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+            <BackChevron/>
+          </TouchableOpacity>
           <TouchableOpacity
             style={ps.coverBtn}
             onPress={() => Alert.alert('Coming soon', 'Cover photo upload coming in a future update.')}
@@ -105,10 +117,8 @@ const ProfileScreen: React.FC<{navigation: any}> = ({navigation}) => {
         {/* ── Avatar (overlapping the banner) ── */}
         <View style={ps.avatarWrap}>
           <View style={ps.avatarCircle}>
-            {user?.profilePhotoURL ? null : (
-              <Text style={ps.avatarInitials}>
-                {getInitials(user?.name ?? 'U')}
-              </Text>
+            {!user?.profilePhotoURL && (
+              <Avatar name={user?.name ?? 'U'} size={AVATAR_SIZE - 8} variant="onLight"/>
             )}
           </View>
         </View>
@@ -155,38 +165,44 @@ const ProfileScreen: React.FC<{navigation: any}> = ({navigation}) => {
 const AVATAR_SIZE = 86;
 
 const ps = StyleSheet.create({
-  safe:  {flex: 1, backgroundColor: '#FFFFFF'},
+  safe:  {flex: 1, backgroundColor: Colors.background},
 
   coverBanner: {
     height: 150,
-    backgroundColor: '#8B7EEE',
+    backgroundColor: Colors.primary,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  coverBtn:     {backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8},
-  coverBtnText: {color: '#FFFFFF', fontSize: 13, fontWeight: '600'},
+  backBtn: {
+    position: 'absolute',
+    top: 14, left: 16,
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: Colors.overlayButton,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  coverBtn:     {backgroundColor: Colors.overlayButton, borderRadius: 20, paddingHorizontal: 16, paddingVertical: 8},
+  coverBtnText: {color: Colors.white, fontSize: 13, fontWeight: '600'},
 
   avatarWrap:   {alignItems: 'center', marginTop: -(AVATAR_SIZE / 2)},
   avatarCircle: {
     width: AVATAR_SIZE, height: AVATAR_SIZE,
     borderRadius: AVATAR_SIZE / 2,
-    backgroundColor: '#FFFFFF',
-    borderWidth: 4, borderColor: '#FFFFFF',
+    backgroundColor: Colors.white,
+    borderWidth: 4, borderColor: Colors.white,
     alignItems: 'center', justifyContent: 'center',
     shadowColor: '#000', shadowOffset: {width:0,height:2}, shadowOpacity:0.12, shadowRadius:8, elevation:4,
     overflow: 'hidden',
   },
-  avatarInitials: {fontSize: 28, fontWeight: '800', color: '#8B7EEE'},
 
   identity:    {alignItems: 'center', paddingTop: 12, paddingBottom: 16},
-  displayName: {fontSize: 20, fontWeight: '800', color: '#000000'},
-  pronouns:    {fontSize: 13, color: '#8B7EEE', marginTop: 2},
-  email:       {fontSize: 13, color: '#7E7E7E', marginTop: 4},
+  displayName: {fontSize: 20, fontWeight: '800', color: Colors.text},
+  pronouns:    {fontSize: 13, color: Colors.primary, marginTop: 2},
+  email:       {fontSize: 13, color: Colors.textSecondary, marginTop: 4},
 
   statsRow:    {flexDirection: 'row', justifyContent: 'center', paddingBottom: 16},
   statItem:    {alignItems: 'center', paddingHorizontal: 24},
-  statNum:     {fontSize: 20, fontWeight: '800', color: '#8B7EEE'},
-  statLabel:   {fontSize: 12, color: '#7E7E7E', marginTop: 2},
+  statNum:     {fontSize: 20, fontWeight: '800', color: Colors.primary},
+  statLabel:   {fontSize: 12, color: Colors.textSecondary, marginTop: 2},
   statDivider: {width: 1, backgroundColor: '#E8E8E8'},
 
   sectionLine: {height: StyleSheet.hairlineWidth, backgroundColor: '#E8E8E8', marginHorizontal: 20},
@@ -198,8 +214,8 @@ const ps = StyleSheet.create({
     borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#F0F0F0',
   },
   menuLeft:     {flexDirection: 'row', alignItems: 'center', gap: 14},
-  menuLabel:    {fontSize: 15, fontWeight: '500', color: '#1A1A1A'},
-  menuLabelRed: {color: '#E05252', fontWeight: '600'},
+  menuLabel:    {fontSize: 15, fontWeight: '500', color: Colors.text},
+  menuLabelRed: {color: Colors.error, fontWeight: '600'},
 });
 
 export default ProfileScreen;

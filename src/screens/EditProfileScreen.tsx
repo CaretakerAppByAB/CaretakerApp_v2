@@ -6,13 +6,15 @@
 import React, {useState} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
-  StyleSheet, SafeAreaView, ActivityIndicator, Alert,
+  StyleSheet, ActivityIndicator, Alert,
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import {
   updateUserProfile, refreshUser,
   PRONOUN_OPTIONS, GOAL_OPTIONS, RESPONSIBILITY_OPTIONS,
 } from '../services/userService';
+import ScreenHeader from '../components/ScreenHeader';
+import {Colors} from '../theme/colors';
 
 const Chip: React.FC<{label: string; selected: boolean; onPress: () => void}> = ({label, selected, onPress}) => (
   <TouchableOpacity style={[ep.chip, selected && ep.chipSelected]} onPress={onPress} activeOpacity={0.7}>
@@ -51,7 +53,8 @@ const EditProfileScreen: React.FC<{navigation: any}> = ({navigation}) => {
   };
 
   return (
-    <SafeAreaView style={ep.safe}>
+    <View style={ep.safe}>
+      <ScreenHeader title="Edit Profile" onBack={() => navigation.goBack()}/>
       <ScrollView style={ep.scroll} contentContainerStyle={ep.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
 
         <Text style={ep.sectionTitle}>Display Name</Text>
@@ -103,37 +106,37 @@ const EditProfileScreen: React.FC<{navigation: any}> = ({navigation}) => {
           disabled={saving}
           activeOpacity={0.85}>
           {saving
-            ? <ActivityIndicator color="#fff"/>
+            ? <ActivityIndicator color={Colors.white}/>
             : <Text style={ep.saveBtnText}>Save Changes</Text>
           }
         </TouchableOpacity>
 
         <View style={{height: 32}}/>
       </ScrollView>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const ep = StyleSheet.create({
-  safe:      {flex: 1, backgroundColor: '#F5F3FF'},
+  safe:      {flex: 1, backgroundColor: Colors.backgroundLight},
   scroll:    {flex: 1},
   container: {padding: 20},
 
-  sectionTitle: {fontSize: 15, fontWeight: '700', color: '#333', marginBottom: 10, marginTop: 4},
+  sectionTitle: {fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 10, marginTop: 4},
   textInput: {
-    backgroundColor: '#FFFFFF', borderRadius: 12, padding: 14,
-    fontSize: 15, color: '#000', borderWidth: 1.5, borderColor: '#E0E0E0', marginBottom: 20,
+    backgroundColor: Colors.white, borderRadius: 12, padding: 14,
+    fontSize: 15, color: Colors.text, borderWidth: 1.5, borderColor: '#E0E0E0', marginBottom: 20,
   },
 
   chipGrid:         {flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 20},
-  chip:             {paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#E0E0E0'},
-  chipSelected:     {backgroundColor: '#8B7EEE', borderColor: '#8B7EEE'},
+  chip:             {paddingHorizontal: 14, paddingVertical: 9, borderRadius: 20, backgroundColor: Colors.white, borderWidth: 1.5, borderColor: '#E0E0E0'},
+  chipSelected:     {backgroundColor: Colors.primary, borderColor: Colors.primary},
   chipText:         {fontSize: 13, fontWeight: '500', color: '#555'},
-  chipTextSelected: {color: '#FFFFFF', fontWeight: '700'},
+  chipTextSelected: {color: Colors.white, fontWeight: '700'},
 
-  saveBtn:     {backgroundColor: '#8B7EEE', borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 8},
+  saveBtn:     {backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center', marginTop: 8},
   btnDisabled: {opacity: 0.55},
-  saveBtnText: {fontSize: 16, fontWeight: '700', color: '#FFFFFF'},
+  saveBtnText: {fontSize: 16, fontWeight: '700', color: Colors.white},
 });
 
 export default EditProfileScreen;

@@ -12,6 +12,8 @@ import {
 import Svg, {Path, Polygon} from 'react-native-svg';
 import {useAuth} from '../context/AuthContext';
 import {subscribeToEntries, toggleStar, deleteEntry, JournalEntry} from '../services/journalService';
+import ScreenHeader from '../components/ScreenHeader';
+import {Colors} from '../theme/colors';
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -19,8 +21,8 @@ const StarIcon = ({filled}: {filled: boolean}) => (
   <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
     <Polygon
       points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
-      fill={filled ? '#8B7EEE' : 'none'}
-      stroke={filled ? '#8B7EEE' : '#BBBBBB'}
+      fill={filled ? Colors.primary : 'none'}
+      stroke={filled ? Colors.primary : '#BBBBBB'}
       strokeWidth={1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -83,10 +85,12 @@ const JournalScreen: React.FC<{navigation: any}> = ({navigation}) => {
   };
 
   return (
-    <ScrollView
-      style={s.scroll}
-      contentContainerStyle={s.container}
-      showsVerticalScrollIndicator={false}>
+    <View style={s.screen}>
+      <ScreenHeader title="Journal"/>
+      <ScrollView
+        style={s.scroll}
+        contentContainerStyle={s.container}
+        showsVerticalScrollIndicator={false}>
 
       {/* ── New Entry card ── */}
       <TouchableOpacity
@@ -111,7 +115,7 @@ const JournalScreen: React.FC<{navigation: any}> = ({navigation}) => {
       {showEntries && (
         <>
           {loading && (
-            <ActivityIndicator color="#8B7EEE" style={{marginTop: 24}}/>
+            <ActivityIndicator color={Colors.primary} style={{marginTop: 24}}/>
           )}
 
           {!loading && entries.length === 0 && (
@@ -155,14 +159,16 @@ const JournalScreen: React.FC<{navigation: any}> = ({navigation}) => {
       )}
 
       <View style={{height: 32}}/>
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 };
 
 // ── Styles ─────────────────────────────────────────────────────────────────────
 
 const s = StyleSheet.create({
-  scroll:    {flex: 1, backgroundColor: '#F5F3FF'},
+  screen:    {flex: 1, backgroundColor: Colors.backgroundLight},
+  scroll:    {flex: 1, backgroundColor: Colors.backgroundLight},
   container: {padding: 16, paddingBottom: 32},
 
   // New entry card
@@ -170,7 +176,7 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 14,
     paddingHorizontal: 18,
     paddingVertical: 16,
@@ -181,13 +187,13 @@ const s = StyleSheet.create({
     shadowRadius: 6,
     elevation: 3,
   },
-  newEntryLabel: {fontSize: 16, fontWeight: '700', color: '#8B7EEE'},
+  newEntryLabel: {fontSize: 16, fontWeight: '700', color: Colors.primary},
   plusCircle: {
     width: 34, height: 34, borderRadius: 17,
-    borderWidth: 2, borderColor: '#8B7EEE',
+    borderWidth: 2, borderColor: Colors.primary,
     alignItems: 'center', justifyContent: 'center',
   },
-  plusText: {fontSize: 22, fontWeight: '300', color: '#8B7EEE', lineHeight: 26},
+  plusText: {fontSize: 22, fontWeight: '300', color: Colors.primary, lineHeight: 26},
 
   // Section header
   sectionHeader: {
@@ -198,7 +204,7 @@ const s = StyleSheet.create({
     paddingHorizontal: 4,
     marginBottom: 8,
   },
-  sectionTitle: {fontSize: 15, fontWeight: '700', color: '#333333'},
+  sectionTitle: {fontSize: 15, fontWeight: '700', color: Colors.text},
 
   // Entry cards — alternate lavender shades
   entryCard: {
@@ -209,22 +215,22 @@ const s = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     marginBottom: 8,
-    shadowColor: '#8B7EEE',
+    shadowColor: Colors.primary,
     shadowOffset: {width: 0, height: 1},
     shadowOpacity: 0.08,
     shadowRadius: 4,
     elevation: 2,
   },
-  entryCardLight: {backgroundColor: '#EDE9FF'},
-  entryCardMed:   {backgroundColor: '#E0DAFF'},
+  entryCardLight: {backgroundColor: Colors.primaryLight},
+  entryCardMed:   {backgroundColor: Colors.cardBackground},
   entryLeft:      {flex: 1, marginRight: 10},
-  entryDate:      {fontSize: 15, fontWeight: '700', color: '#5A4DA8'},
-  entryPreview:   {fontSize: 12, color: '#7E7E7E', marginTop: 3},
+  entryDate:      {fontSize: 15, fontWeight: '700', color: Colors.primaryDark},
+  entryPreview:   {fontSize: 12, color: Colors.textSecondary, marginTop: 3},
 
   // Empty & hint
   emptyState: {alignItems: 'center', marginTop: 32, marginBottom: 16},
-  emptyTitle: {fontSize: 16, fontWeight: '700', color: '#8B7EEE', marginBottom: 6},
-  emptySub:   {fontSize: 13, color: '#7E7E7E', textAlign: 'center', lineHeight: 20},
+  emptyTitle: {fontSize: 16, fontWeight: '700', color: Colors.primary, marginBottom: 6},
+  emptySub:   {fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20},
   hintText:   {textAlign: 'center', fontSize: 11, color: '#BBBBBB', marginTop: 8},
 });
 

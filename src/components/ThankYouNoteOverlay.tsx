@@ -25,12 +25,13 @@ import {
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
 import {EnvelopeOpenIcon} from './icons/TabIcons';
+import {Colors} from '../theme/colors';
 
 const {width: SW, height: SH} = Dimensions.get('window');
 
 // ── SVG helpers ────────────────────────────────────────────────────────────────
 
-const HeartIcon = ({size = 20, color = '#C084FC'}: {size?: number; color?: string}) => (
+const HeartIcon = ({size = 20, color = Colors.primary}: {size?: number; color?: string}) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill={color}>
     <Path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
   </Svg>
@@ -91,14 +92,16 @@ interface Props {
 }
 
 // Heart config — stable (not re-randomised on re-render)
+// Colors drawn from the brand purple palette (Colors.primary / primaryMedium / primaryDark)
+// instead of one-off magenta/violet shades, so the hearts stay varied but on-brand.
 const HEARTS = [
-  {delay: 0,    x: -80,  size: 18, color: '#C084FC'},
-  {delay: 180,  x:  40,  size: 24, color: '#8B7EEE'},
-  {delay: 340,  x: -30,  size: 14, color: '#E879F9'},
-  {delay: 500,  x:  70,  size: 20, color: '#A78BFA'},
-  {delay: 660,  x: -60,  size: 16, color: '#C084FC'},
-  {delay: 820,  x:  10,  size: 22, color: '#8B7EEE'},
-  {delay: 980,  x: -90,  size: 12, color: '#E879F9'},
+  {delay: 0,    x: -80,  size: 18, color: Colors.primary},
+  {delay: 180,  x:  40,  size: 24, color: Colors.primary},
+  {delay: 340,  x: -30,  size: 14, color: Colors.primaryDark},
+  {delay: 500,  x:  70,  size: 20, color: Colors.primaryMedium},
+  {delay: 660,  x: -60,  size: 16, color: Colors.primary},
+  {delay: 820,  x:  10,  size: 22, color: Colors.primary},
+  {delay: 980,  x: -90,  size: 12, color: Colors.primaryDark},
 ];
 
 const ThankYouNoteOverlay: React.FC<Props> = ({visible, message, senderName, onClose}) => {
@@ -247,7 +250,7 @@ const CARD_W = Math.min(SW - 40, 360);
 
 const s = StyleSheet.create({
   backdrop: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     backgroundColor: 'rgba(0,0,0,0.78)',
   },
   centreWrap: {
@@ -257,7 +260,7 @@ const s = StyleSheet.create({
   },
   card: {
     width:           CARD_W,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius:    24,
     overflow:        'hidden',
     shadowColor:     '#000',
@@ -269,15 +272,15 @@ const s = StyleSheet.create({
 
   // Header
   cardHeader: {
-    backgroundColor: '#8B7EEE',
+    backgroundColor: Colors.primary,
     paddingTop:      20,
     paddingBottom:   24,
     alignItems:      'center',
   },
   starsTop:    {fontSize: 18, letterSpacing: 8, marginBottom: 8, opacity: 0.8},
   envelopeWrap:{marginBottom: 12},
-  headerSub:   {fontSize: 13, color: 'rgba(255,255,255,0.8)', marginBottom: 4},
-  headerTitle: {fontSize: 22, fontWeight: '800', color: '#FFFFFF', letterSpacing: -0.3},
+  headerSub:   {fontSize: 13, color: Colors.overlayLight, marginBottom: 4},
+  headerTitle: {fontSize: 22, fontWeight: '800', color: Colors.white, letterSpacing: -0.3},
 
   // Content
   content: {
@@ -286,29 +289,29 @@ const s = StyleSheet.create({
     paddingBottom:     4,
   },
   fromRow:       {flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14},
-  fromAvatar:    {width: 44, height: 44, borderRadius: 22, backgroundColor: '#A18CE6', alignItems: 'center', justifyContent: 'center'},
-  fromAvatarText:{fontSize: 16, fontWeight: '700', color: '#FFFFFF'},
+  fromAvatar:    {width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center'},
+  fromAvatarText:{fontSize: 16, fontWeight: '700', color: Colors.white},
   fromLabel:     {fontSize: 11, color: '#9E9E9E', fontWeight: '500'},
-  fromName:      {fontSize: 15, fontWeight: '700', color: '#000000'},
+  fromName:      {fontSize: 15, fontWeight: '700', color: Colors.text},
   divider:       {height: StyleSheet.hairlineWidth, backgroundColor: '#E8E8E8', marginBottom: 14},
   messageBox: {
-    backgroundColor: '#F8F5FF',
+    backgroundColor: Colors.primaryLight,
     borderRadius:    12,
     padding:         14,
     marginBottom:    16,
     borderLeftWidth: 3,
-    borderLeftColor: '#8B7EEE',
+    borderLeftColor: Colors.primary,
   },
-  messageText: {fontSize: 15, color: '#1A1A1A', lineHeight: 24, fontStyle: 'italic'},
+  messageText: {fontSize: 15, color: Colors.text, lineHeight: 24, fontStyle: 'italic'},
 
   // Button
   closeBtn: {
-    backgroundColor: '#8B7EEE',
+    backgroundColor: Colors.primary,
     borderRadius:    14,
     paddingVertical: 14,
     alignItems:      'center',
   },
-  closeBtnText: {fontSize: 15, fontWeight: '700', color: '#FFFFFF'},
+  closeBtnText: {fontSize: 15, fontWeight: '700', color: Colors.white},
 });
 
 export default ThankYouNoteOverlay;

@@ -9,7 +9,7 @@
  *  - Removed the inline custom `<View style={s.header}>` block so the native header rules the page.
  */
 
-import React, {useState, useEffect, useCallback, useLayoutEffect} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -18,36 +18,23 @@ import {
   ScrollView,
   Modal,
   Dimensions,
-  SafeAreaView,
-  StatusBar,
 } from 'react-native';
-import Svg, {Circle, Path, Rect, G} from 'react-native-svg';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useAuth} from '../context/AuthContext';
+import ScreenHeader from '../components/ScreenHeader';
+import MoodFace from '../components/MoodFace';
+import {Colors} from '../theme/colors';
+import {
+  MoodType,
+  MOOD_OPTIONS,
+  MOOD_COLORS,
+  saveMood,
+  loadMonthMoods,
+  shouldShowModal,
+} from '../services/moodService';
 
 const {width: SW} = Dimensions.get('window');
 
-// ── Types & constants ──────────────────────────────────────────────────────────
-
-type MoodType = 'Content' | 'Calm' | 'Upset' | 'Stressed' | 'Overwhelmed' | 'Tired';
-
-const MOOD_OPTIONS: {type: MoodType; label: string}[] = [
-  {type: 'Content',     label: 'Content'},
-  {type: 'Calm',        label: 'Calm'},
-  {type: 'Upset',       label: 'Upset'},
-  {type: 'Stressed',    label: 'Stressed'},
-  {type: 'Overwhelmed', label: 'Overwhelmed'},
-  {type: 'Tired',       label: 'Tired'},
-];
-
-const MOOD_COLORS: Record<MoodType, string> = {
-  Content:     '#82C882',
-  Calm:        '#7EC8D8',
-  Upset:       '#977ED8',
-  Stressed:    '#D87E7E',
-  Overwhelmed: '#7E9DD8',
-  Tired:       '#D8D07E',
-};
+// ── Constants ──────────────────────────────────────────────────────────────────
 
 const MONTH_NAMES = [
   'January','February','March','April','May','June',
@@ -61,95 +48,6 @@ const DAY_NAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
 const CELL_SIZE   = Math.floor((SW - 56) / 7);
 const FACE_IN_CAL = Math.min(CELL_SIZE - 6, 26);
 const CELL_H      = FACE_IN_CAL + 18;
-
-// ── AsyncStorage ───────────────────────────────────────────────────────────────
-
-const toDateStr  = (d: Date) =>
-  `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-const moodKey    = (uid: string, ds: string) => `@alz_mood_${uid}_${ds}`;
-const checkKey   = (uid: string) => `@alz_mood_checkin_${uid}`;
-
-const saveMood = async (uid: string, date: Date, mood: MoodType) => {
-  await AsyncStorage.setItem(moodKey(uid, toDateStr(date)), mood);
-  await AsyncStorage.setItem(checkKey(uid), toDateStr(date));
-};
-
-const loadMonthMoods = async (
-  uid: string, year: number, month: number,
-): Promise<Record<number, MoodType>> => {
-  const days  = new Date(year, month + 1, 0).getDate();
-  const pairs = Array.from({length: days}, (_, i) => {
-    const d = new Date(year, month, i + 1);
-    return [moodKey(uid, toDateStr(d)), i + 1] as [string, number];
-  });
-  const results = await AsyncStorage.multiGet(pairs.map(p => p[0]));
-  const out: Record<number, MoodType> = {};
-  results.forEach(([, val], i) => { if (val) out[pairs[i][1]] = val as MoodType; });
-  return out;
-};
-
-const shouldShowModal = async (uid: string): Promise<boolean> => {
-  const last = await AsyncStorage.getItem(checkKey(uid));
-  return last !== toDateStr(new Date());
-};
-
-// ── SVG Mood Face ──────────────────────────────────────────────────────────────
-
-const MoodFace: React.FC<{mood: MoodType; size?: number}> = ({mood, size = 48}) => {
-  const F = '#FCEA2B';
-  const S = '#333333';
-
-  const happyEyes = () => (
-    <G>
-      <Path d="M11,16 Q14.5,11 18,16" stroke={S} strokeWidth={2} strokeLinecap="round" fill="none"/>
-      <Path d="M22,16 Q25.5,11 29,16" stroke={S} strokeWidth={2} strokeLinecap="round" fill="none"/>
-    </G>
-  );
-  const dotEyes = (cy = 15, r = 2.5) => (
-    <G>
-      <Circle cx={14} cy={cy} r={r} fill={S}/>
-      <Circle cx={26} cy={cy} r={r} fill={S}/>
-    </G>
-  );
-  const tiredEyes = () => (
-    <G>
-      <Rect x={11} y={13} width={7} height={4.5} rx={2.25} fill={S}/>
-      <Rect x={22} y={13} width={7} height={4.5} rx={2.25} fill={S}/>
-    </G>
-  );
-  const angryBrows = () => (
-    <G>
-      <Path d="M11,10 L18,13" stroke={S} strokeWidth={2} strokeLinecap="round"/>
-      <Path d="M29,10 L22,13" stroke={S} strokeWidth={2} strokeLinecap="round"/>
-    </G>
-  );
-
-  const eyes: Record<MoodType, React.ReactNode> = {
-    Content:     happyEyes(),
-    Calm:        dotEyes(16, 2.2),
-    Upset:       dotEyes(16, 2.2),
-    Stressed:    <G>{angryBrows()}{dotEyes(17, 2)}</G>,
-    Overwhelmed: dotEyes(15, 3.2),
-    Tired:       tiredEyes(),
-  };
-
-  const mouth: Record<MoodType, string> = {
-    Content:     'M10,24 Q20,33 30,24',
-    Calm:        'M13,25 Q20,30 27,25',
-    Upset:       'M11,27 Q20,20 29,27',
-    Stressed:    'M11,27 Q20,20 29,27',
-    Overwhelmed: 'M10,29 Q20,18 30,29',
-    Tired:       'M13,24 L27,24',
-  };
-
-  return (
-    <Svg width={size} height={size} viewBox="0 0 40 40">
-      <Circle cx={20} cy={20} r={18} fill={F} stroke={S} strokeWidth={1}/>
-      {eyes[mood]}
-      <Path d={mouth[mood]} stroke={S} strokeWidth={1.8} strokeLinecap="round" fill="none"/>
-    </Svg>
-  );
-};
 
 // ── Check-in modal ─────────────────────────────────────────────────────────────
 
@@ -180,27 +78,9 @@ const MoodCheckInModal: React.FC<{
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 
-const MoodScreen: React.FC<{navigation: any}> = ({navigation}) => {
+const MoodScreen: React.FC<{navigation: any}> = () => {
   const {user} = useAuth();
-  const uid = user?.id ?? 'guest';
-
-  // Apply navigation header layout explicitly matching CommunityForum
-  useLayoutEffect(() => {
-    navigation.setOptions({
-      headerShown: true, // Forces native header visibility overrides 
-      title: 'Mood Calendar',
-      headerStyle: {
-        backgroundColor: '#8B7EEE',
-        height: 130,
-      },
-      headerTitleStyle: {
-        fontSize: 18,
-        fontWeight: '700',
-        color: '#FFFFFF',
-      },
-      headerTintColor: '#FFFFFF',
-    });
-  }, [navigation]);
+  const uid = user?.uid ?? 'guest';
 
   const now = new Date();
   const [year,      setYear]      = useState(now.getFullYear());
@@ -254,8 +134,8 @@ const MoodScreen: React.FC<{navigation: any}> = ({navigation}) => {
     <>
       <MoodCheckInModal visible={showModal} onSelect={handleSelect}/>
 
-      <SafeAreaView style={s.safeArea}>
-        <StatusBar barStyle="light-content" backgroundColor="#8B7EEE"/>
+      <View style={s.safeArea}>
+        <ScreenHeader title="Mood Calendar"/>
 
         <ScrollView
           style={s.scroll}
@@ -328,7 +208,7 @@ const MoodScreen: React.FC<{navigation: any}> = ({navigation}) => {
 
           <View style={{height: 16}}/>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </>
   );
 };
@@ -338,11 +218,11 @@ const MoodScreen: React.FC<{navigation: any}> = ({navigation}) => {
 const s = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F5F3FF', 
+    backgroundColor: Colors.backgroundLight,
   },
   scroll: {
     flex: 1,
-    backgroundColor: '#F5F3FF',
+    backgroundColor: Colors.backgroundLight,
   },
   container: {
     paddingBottom: 24,
@@ -350,7 +230,7 @@ const s = StyleSheet.create({
 
   // Cards
   card: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 14,
     padding: 12,
     marginHorizontal: 16,
@@ -364,7 +244,7 @@ const s = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#000000',
+    color: Colors.text,
     marginBottom: 10,
   },
 
@@ -376,8 +256,8 @@ const s = StyleSheet.create({
     marginBottom: 8,
   },
   navBtn:    {paddingHorizontal: 8, paddingVertical: 4},
-  navArrow:  {fontSize: 22, color: '#8B7EEE', fontWeight: '600'},
-  monthLabel:{fontSize: 14, fontWeight: '700', color: '#000000'},
+  navArrow:  {fontSize: 22, color: Colors.primary, fontWeight: '600'},
+  monthLabel:{fontSize: 14, fontWeight: '700', color: Colors.text},
 
   // Calendar
   weekRow:  {flexDirection: 'row', marginBottom: 2},
@@ -386,7 +266,7 @@ const s = StyleSheet.create({
     textAlign: 'center',
     fontSize: 10,
     fontWeight: '700',
-    color: '#7E7E7E',
+    color: Colors.textSecondary,
     paddingBottom: 4,
   },
   cell: {
@@ -397,9 +277,9 @@ const s = StyleSheet.create({
     paddingTop: 3,
     borderRadius: 7,
   },
-  cellToday:    {backgroundColor: '#EDE9FF'},
-  dayNum:       {fontSize: 11, fontWeight: '500', color: '#000000', lineHeight: 14},
-  dayNumToday:  {color: '#8B7EEE', fontWeight: '800'},
+  cellToday:    {backgroundColor: Colors.primaryLight},
+  dayNum:       {fontSize: 11, fontWeight: '500', color: Colors.text, lineHeight: 14},
+  dayNumToday:  {color: Colors.primary, fontWeight: '800'},
   cellFaceArea: {
     height: FACE_IN_CAL,
     alignItems: 'center',
@@ -408,12 +288,12 @@ const s = StyleSheet.create({
   },
 
   // Frequency chart
-  emptyNote: {fontSize: 12, color: '#7E7E7E', textAlign: 'center', paddingVertical: 6},
+  emptyNote: {fontSize: 12, color: Colors.textSecondary, textAlign: 'center', paddingVertical: 6},
   freqRow:   {flexDirection: 'row', alignItems: 'center', marginBottom: 8, gap: 6},
-  freqLabel: {width: 82, fontSize: 11, fontWeight: '500', color: '#333333'},
+  freqLabel: {width: 82, fontSize: 11, fontWeight: '500', color: Colors.text},
   barTrack:  {flex: 1, height: 12, backgroundColor: '#E8E8E8', borderRadius: 6, overflow: 'hidden'},
   barFill:   {height: '100%', borderRadius: 6},
-  freqCount: {width: 20, fontSize: 11, fontWeight: '700', color: '#333333', textAlign: 'right'},
+  freqCount: {width: 20, fontSize: 11, fontWeight: '700', color: Colors.text, textAlign: 'right'},
 });
 
 // Modal styles
@@ -426,7 +306,7 @@ const ms = StyleSheet.create({
     padding: 20,
   },
   card: {
-    backgroundColor: '#A18CE6',
+    backgroundColor: Colors.primaryMedium,
     borderRadius: 20,
     padding: 20,
     width: '100%',
@@ -434,7 +314,7 @@ const ms = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: '#FFFFFF',
+    color: Colors.white,
     textAlign: 'center',
     marginBottom: 16,
   },
@@ -446,7 +326,7 @@ const ms = StyleSheet.create({
   },
   option: {
     width: (SW - 40 - 40 - 20) / 3,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: Colors.white,
     borderRadius: 14,
     paddingVertical: 12,
     paddingHorizontal: 4,
@@ -461,7 +341,7 @@ const ms = StyleSheet.create({
   optLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#333333',
+    color: Colors.text,
     textAlign: 'center',
   },
 });

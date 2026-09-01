@@ -6,9 +6,11 @@
  */
 
 import React, {useState} from 'react';
-import {View, Text, Switch, StyleSheet, SafeAreaView, TouchableOpacity, Alert} from 'react-native';
+import {View, Text, Switch, StyleSheet, TouchableOpacity, Alert} from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import {updateUserProfile} from '../services/userService';
+import ScreenHeader from '../components/ScreenHeader';
+import {Colors} from '../theme/colors';
 
 const Row: React.FC<{title: string; sub: string; value: boolean; onChange: (v: boolean) => void}> =
   ({title, sub, value, onChange}) => (
@@ -20,8 +22,8 @@ const Row: React.FC<{title: string; sub: string; value: boolean; onChange: (v: b
     <Switch
       value={value}
       onValueChange={onChange}
-      trackColor={{false: '#E8E8E8', true: '#8B7EEE'}}
-      thumbColor="#FFFFFF"
+      trackColor={{false: '#E8E8E8', true: Colors.primary}}
+      thumbColor={Colors.white}
     />
   </View>
 );
@@ -46,7 +48,8 @@ const NotificationSettingsScreen: React.FC<{navigation: any}> = ({navigation}) =
   };
 
   return (
-    <SafeAreaView style={ns.safe}>
+    <View style={ns.safe}>
+      <ScreenHeader title="Notifications" onBack={() => navigation.goBack()}/>
       <View style={ns.container}>
         <Text style={ns.hint}>
           Notification preferences are saved to your profile.
@@ -87,23 +90,23 @@ const NotificationSettingsScreen: React.FC<{navigation: any}> = ({navigation}) =
           <Text style={ns.saveBtnText}>Save</Text>
         </TouchableOpacity>
       </View>
-    </SafeAreaView>
+    </View>
   );
 };
 
 const ns = StyleSheet.create({
-  safe:      {flex: 1, backgroundColor: '#F5F3FF'},
+  safe:      {flex: 1, backgroundColor: Colors.backgroundLight},
   container: {padding: 20},
   hint:      {fontSize: 12, color: '#9E9E9E', textAlign: 'center', lineHeight: 18, marginBottom: 20},
 
-  card: {backgroundColor:'#FFFFFF', borderRadius:14, padding:4, shadowColor:'#000', shadowOffset:{width:0,height:1}, shadowOpacity:0.06, shadowRadius:4, elevation:2},
+  card: {backgroundColor: Colors.white, borderRadius:14, padding:4, shadowColor:'#000', shadowOffset:{width:0,height:1}, shadowOpacity:0.06, shadowRadius:4, elevation:2},
   row:  {flexDirection:'row', alignItems:'center', padding:14},
-  rowTitle: {fontSize:15, fontWeight:'600', color:'#000'},
+  rowTitle: {fontSize:15, fontWeight:'600', color: Colors.text},
   rowSub:   {fontSize:12, color:'#7E7E7E', marginTop:2},
   divider:  {height:StyleSheet.hairlineWidth, backgroundColor:'#F0F0F0', marginHorizontal:14},
 
-  saveBtn:     {backgroundColor:'#8B7EEE', borderRadius:14, paddingVertical:16, alignItems:'center', marginTop:20},
-  saveBtnText: {color:'#FFFFFF', fontSize:16, fontWeight:'700'},
+  saveBtn:     {backgroundColor: Colors.primary, borderRadius:14, paddingVertical:16, alignItems:'center', marginTop:20},
+  saveBtnText: {color: Colors.white, fontSize:16, fontWeight:'700'},
 });
 
 export default NotificationSettingsScreen;

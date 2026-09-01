@@ -25,15 +25,10 @@ import ProfileScreen            from '../screens/ProfileScreen';
 import EditProfileScreen        from '../screens/EditProfileScreen';
 
 import {HomeIcon, JournalIcon, CommunityIcon, SupportIcon, MessagesIcon} from '../components/icons/TabIcons';
+import {Colors} from '../theme/colors';
 
-// ── Shared header style ────────────────────────────────────────────────────────
-
-const HEADER_OPTS = {
-  headerStyle:      {backgroundColor: '#8B7EEE'},
-  headerTintColor:  '#FFFFFF',
-  headerTitleStyle: {fontWeight: 'bold' as const, fontSize: 18},
-  headerBackTitle:  '',
-};
+// Every screen renders its own <ScreenHeader>, so every navigator here is headerless.
+const NO_HEADER = {headerShown: false};
 
 // ── Nested stack navigators ────────────────────────────────────────────────────
 
@@ -45,10 +40,10 @@ const PrfStack   = createNativeStackNavigator();
 
 function JournalNavigator() {
   return (
-    <JrnStack.Navigator screenOptions={HEADER_OPTS}>
-      <JrnStack.Screen name="JournalHome"       component={JournalScreen}           options={{title: 'Journal'}}/>
-      <JrnStack.Screen name="JournalTypeSelect" component={JournalTypeSelectScreen} options={{title: 'Journal'}}/>
-      <JrnStack.Screen name="JournalEntry"      component={JournalEntryScreen}      options={{title: 'Journal'}}/>
+    <JrnStack.Navigator screenOptions={NO_HEADER}>
+      <JrnStack.Screen name="JournalHome"       component={JournalScreen}/>
+      <JrnStack.Screen name="JournalTypeSelect" component={JournalTypeSelectScreen}/>
+      <JrnStack.Screen name="JournalEntry"      component={JournalEntryScreen}/>
     </JrnStack.Navigator>
   );
 }
@@ -102,7 +97,7 @@ function CustomTabBar({state, navigation}: BottomTabBarProps) {
         const config = TAB_CONFIG.find(c => c.name === route.name);
         if (!config) return null;
         const isFocused = state.index === index;
-        const color = isFocused ? '#000000' : '#7E7E7E';
+        const color = isFocused ? Colors.primary : Colors.tabInactive;
         const {Icon, label} = config;
         return (
           <TouchableOpacity
@@ -129,7 +124,7 @@ const t = StyleSheet.create({
   },
   tab:       {flex: 1, alignItems: 'center', gap: 3},
   label:     {fontSize: 10, fontWeight: '700', marginTop: 1},
-  indicator: {width: 16, height: 2, backgroundColor: '#000', borderRadius: 2, marginTop: 2},
+  indicator: {width: 16, height: 2, backgroundColor: Colors.primary, borderRadius: 2, marginTop: 2},
 });
 
 // ── Root navigator ─────────────────────────────────────────────────────────────
@@ -138,18 +133,18 @@ export default function AppNavigator() {
   return (
     <Tab.Navigator
       tabBar={(props: BottomTabBarProps) => <CustomTabBar {...props}/>}
-      screenOptions={HEADER_OPTS}>
+      screenOptions={NO_HEADER}>
 
-      <Tab.Screen name="Home"      component={HomeScreen}            options={{headerShown: false}}/>
-      <Tab.Screen name="Journal"   component={JournalNavigator}      options={{headerShown: false}}/>
-      <Tab.Screen name="Community" component={CommunityForumScreen}  options={{title: 'Community'}}/>
-      <Tab.Screen name="Support"   component={ResourceLibraryScreen} options={{title: 'Support'}}/>
-      <Tab.Screen name="Messages"  component={MessagesNavigator}     options={{headerShown: false}}/>
+      <Tab.Screen name="Home"      component={HomeScreen}/>
+      <Tab.Screen name="Journal"   component={JournalNavigator}/>
+      <Tab.Screen name="Community" component={CommunityForumScreen}/>
+      <Tab.Screen name="Support"   component={ResourceLibraryScreen}/>
+      <Tab.Screen name="Messages"  component={MessagesNavigator}/>
 
       {/* Hidden tabs */}
-      <Tab.Screen name="Mood"      component={MoodScreen}            options={{headerShown: false}}/>
-      <Tab.Screen name="Gratitude" component={GratitudeNavigator}    options={{headerShown: false}}/>
-      <Tab.Screen name="Profile"   component={ProfileNavigator}      options={{headerShown: false}}/>
+      <Tab.Screen name="Mood"      component={MoodScreen}/>
+      <Tab.Screen name="Gratitude" component={GratitudeNavigator}/>
+      <Tab.Screen name="Profile"   component={ProfileNavigator}/>
     </Tab.Navigator>
   );
 }
