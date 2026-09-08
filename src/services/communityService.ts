@@ -40,6 +40,14 @@ export interface Post {
   createdAt:    number;    // Unix timestamp — used for ordering
 }
 
+export interface Comment {
+  id:         string;
+  authorId:   string;
+  authorName: string;
+  content:    string;
+  createdAt:  number;
+}
+
 // ── Device ID ──────────────────────────────────────────────────────────────────
 //
 // Each device generates a unique ID the first time the app runs.
@@ -173,4 +181,54 @@ export const toggleLike = async (
     likedBy:   currentlyLiked ? arrayRemove(userId) : arrayUnion(userId),
     likeCount: increment(currentlyLiked ? -1 : 1),
   });
+};
+
+// ── Comments ───────────────────────────────────────────────────────────────────
+//
+// Comments live in a subcollection at posts/{postId}/comments so they scale
+// independently of the post document and never hit Firestore's per-document
+// size limit no matter how many replies a post gets.
+
+export const subscribeToComments = (
+  postId:   string,
+  onUpdate: (comments: Comment[]) => void,
+  onError:  (err: Error) => void,
+): (() => void) => {
+  const q = query(
+    collection(db, 'posts', postId, 'comments'),
+    orderBy('createdAt', 'asc'),
+    limit(500),
+  );
+  return onSnapshot(
+    q,
+    snapshot => {
+      const comments = snapshot.docs.map(d => ({...d.data(), id: d.id})) as Comment[];
+      onUpdate(comments);
+    },
+    onError,
+  );
+};
+
+export const addComment = async (
+  postId:     string,
+  authorName: string,
+  content:    string,
+): Promise<void> => {
+  const authorId = await getDeviceId();
+  await addDoc(collection(db, 'posts', postId, 'comments'), {
+    authorId,
+    authorName,
+    content:   content.trim(),
+    createdAt: Date.now(),
+    timestamp: serverTimestamp(),
+  });
+  // Best-effort — the comment itself is already saved above, so a rules/
+  // permission issue on this counter update shouldn't hide a successful post.
+  try {
+    await updateDoc(doc(db, 'posts', postId), {
+      commentCount: increment(1),
+    });
+  } catch (err) {
+    console.warn('Could not update commentCount:', err);
+  }
 };

@@ -16,6 +16,10 @@ import JournalTypeSelectScreen  from '../screens/JournalTypeSelectScreen';
 import JournalEntryScreen       from '../screens/JournalEntryScreen';
 import CommunityForumScreen     from '../screens/CommunityForumScreen';
 import ResourceLibraryScreen    from '../screens/ResourceLibraryScreen';
+import SupportActionScreen      from '../screens/SupportActionScreen';
+import CreateSupportRequestScreen        from '../screens/CreateSupportRequestScreen';
+import SupportRequestConfirmationScreen  from '../screens/SupportRequestConfirmationScreen';
+import SubmittedRequestsScreen           from '../screens/SubmittedRequestsScreen';
 import PrivateMessagesScreen    from '../screens/PrivateMessagesScreen';
 import ChatScreen               from '../screens/ChatScreen';
 import MoodScreen               from '../screens/MoodScreen';
@@ -37,6 +41,7 @@ const JrnStack   = createNativeStackNavigator();
 const MsgStack   = createNativeStackNavigator();
 const GrtStack   = createNativeStackNavigator();
 const PrfStack   = createNativeStackNavigator();
+const SupStack   = createNativeStackNavigator();
 
 function JournalNavigator() {
   return (
@@ -54,6 +59,18 @@ function MessagesNavigator() {
       <MsgStack.Screen name="Inbox" component={PrivateMessagesScreen}/>
       <MsgStack.Screen name="Chat"  component={ChatScreen}/>
     </MsgStack.Navigator>
+  );
+}
+
+function SupportNavigator() {
+  return (
+    <SupStack.Navigator screenOptions={{headerShown: false}}>
+      <SupStack.Screen name="SupportHome"        component={SupportActionScreen}/>
+      <SupStack.Screen name="CreateRequest"      component={CreateSupportRequestScreen}/>
+      <SupStack.Screen name="RequestConfirmation" component={SupportRequestConfirmationScreen}/>
+      <SupStack.Screen name="SubmittedRequests"  component={SubmittedRequestsScreen}/>
+      <SupStack.Screen name="ResourceLibrary"    component={ResourceLibraryScreen}/>
+    </SupStack.Navigator>
   );
 }
 
@@ -138,7 +155,7 @@ export default function AppNavigator() {
       <Tab.Screen name="Home"      component={HomeScreen}/>
       <Tab.Screen name="Journal"   component={JournalNavigator}/>
       <Tab.Screen name="Community" component={CommunityForumScreen}/>
-      <Tab.Screen name="Support"   component={ResourceLibraryScreen}/>
+      <Tab.Screen name="Support"   component={SupportNavigator}/>
       <Tab.Screen name="Messages"  component={MessagesNavigator}/>
 
       {/* Hidden tabs */}

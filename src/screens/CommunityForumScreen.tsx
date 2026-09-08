@@ -26,6 +26,7 @@ import {useAuth} from '../context/AuthContext';
 import {detectPHI, redactPHI} from '../services/phiDetection';
 import PHIWarningBanner from '../components/PHIWarningBanner';
 import ScreenHeader from '../components/ScreenHeader';
+import CommentsModal from '../components/CommentsModal';
 import Avatar from '../components/Avatar';
 import {Colors} from '../theme/colors';
 import {
@@ -52,18 +53,6 @@ const HeartIcon: React.FC<{filled: boolean; size?: number}> = ({filled, size = 2
   </Svg>
 );
 
-const ShareIcon: React.FC<{size?: number}> = ({size = 18}) => (
-  <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Path
-      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1M16 8l-4-4-4 4M12 4v12"
-      stroke="#7E7E7E"
-      strokeWidth={1.5}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </Svg>
-);
-
 const PlusIcon: React.FC = () => (
   <Svg width={28} height={28} viewBox="0 0 24 24" fill="none">
     <Path d="M12 5v14M5 12h14" stroke="#FFFFFF" strokeWidth={2.5} strokeLinecap="round"/>
@@ -73,12 +62,13 @@ const PlusIcon: React.FC = () => (
 // ── Post card ──────────────────────────────────────────────────────────────────
 
 interface PostCardProps {
-  post:    Post;
-  liked:   boolean;
-  onLike:  () => void;
+  post:        Post;
+  liked:       boolean;
+  onLike:      () => void;
+  onComment:   () => void;
 }
 
-const PostCard: React.FC<PostCardProps> = ({post, liked, onLike}) => (
+const PostCard: React.FC<PostCardProps> = ({post, liked, onLike, onComment}) => (
   <View style={s.card}>
     <View style={s.cardHeader}>
       <Avatar name={post.authorName} size={AVATAR_SIZE}/>
@@ -91,11 +81,6 @@ const PostCard: React.FC<PostCardProps> = ({post, liked, onLike}) => (
           <Text style={s.eventBadgeText}>Event</Text>
         </View>
       )}
-      <View style={s.shareBtn}>
-        <View style={s.shareBtnInner}>
-          <ShareIcon size={15}/>
-        </View>
-      </View>
     </View>
 
     <Text style={s.content}>{post.content}</Text>
@@ -107,7 +92,9 @@ const PostCard: React.FC<PostCardProps> = ({post, liked, onLike}) => (
           {post.likeCount}
         </Text>
       </TouchableOpacity>
-      <Text style={s.commentCount}>{post.commentCount} Comments</Text>
+      <TouchableOpacity onPress={onComment} activeOpacity={0.7}>
+        <Text style={s.commentCount}>{post.commentCount} Comments</Text>
+      </TouchableOpacity>
     </View>
   </View>
 );
@@ -279,6 +266,7 @@ const CommunityForumScreen: React.FC = () => {
   const [error,       setError]       = useState<string | null>(null);
   const [deviceId,    setDeviceId]    = useState('');
   const [showNewPost, setShowNewPost] = useState(false);
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
 
   // Load this device's unique ID
   useEffect(() => {
@@ -414,6 +402,7 @@ const CommunityForumScreen: React.FC = () => {
               post={post}
               liked={deviceId ? post.likedBy.includes(deviceId) : false}
               onLike={() => handleLike(post)}
+              onComment={() => setCommentsPostId(post.id)}
             />
           ))}
           <View style={{height: 100}}/>
@@ -434,6 +423,14 @@ const CommunityForumScreen: React.FC = () => {
         authorName={authorName}
         onClose={() => setShowNewPost(false)}
         onPosted={handlePosted}
+      />
+
+      {/* Comments modal */}
+      <CommentsModal
+        visible={!!commentsPostId}
+        postId={commentsPostId}
+        authorName={authorName}
+        onClose={() => setCommentsPostId(null)}
       />
     </View>
   );
@@ -491,11 +488,6 @@ const s = StyleSheet.create({
     paddingHorizontal: 8, paddingVertical: 2, marginRight: 6,
   },
   eventBadgeText: {fontSize: 10, fontWeight: '700', color: Colors.white},
-  shareBtn: {marginLeft: 4},
-  shareBtnInner: {
-    width: 30, height: 30, borderRadius: 15,
-    backgroundColor: Colors.primaryMedium, alignItems: 'center', justifyContent: 'center',
-  },
   content: {fontSize: 13, lineHeight: 20, color: Colors.text, marginBottom: 12},
   cardFooter: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
@@ -564,7 +556,7 @@ const s = StyleSheet.create({
   tabSelector: {flexDirection: 'row', gap: 8},
   tabOption: {
     paddingHorizontal: 16, paddingVertical: 7,
-    borderRadius: 20, backgroundColor: Colors.backgroundLight,
+    borderRadius: 20, backgroundColor: Colors.primaryLight,
   },
   tabOptionActive: {backgroundColor: Colors.primary},
   tabOptionText: {fontSize: 13, fontWeight: '500', color: Colors.textSecondary},

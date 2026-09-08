@@ -1,28 +1,26 @@
 /**
- * src/screens/auth/RegisterScreen.tsx — redesigned to match Image 2
+ * src/screens/auth/RegisterScreen.tsx — redesigned to match latest Figma export
  */
 
 import React, {useState} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView,
+  ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Image,
 } from 'react-native';
-import Svg, {Path, Rect} from 'react-native-svg';
+import Svg, {Path, Circle} from 'react-native-svg';
 import {useAuth} from '../../context/AuthContext';
-import ScreenHeader from '../../components/ScreenHeader';
 import {Colors} from '../../theme/colors';
 
-const EmailIcon = () => (
-  <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-    <Rect x={2} y={4} width={20} height={16} rx={3} stroke={Colors.primary} strokeWidth={1.8}/>
-    <Path d="M2 8l10 6 10-6" stroke={Colors.primary} strokeWidth={1.8} strokeLinecap="round"/>
+const BackIcon = () => (
+  <Svg width={22} height={20} viewBox="0 0 22 20" fill="none">
+    <Path d="M21 10H1M1 10L10 1M1 10l9 9" stroke={Colors.primary} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
   </Svg>
 );
 
-const LockIcon = () => (
+const PersonIcon = () => (
   <Svg width={18} height={18} viewBox="0 0 24 24" fill="none">
-    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke={Colors.primary} strokeWidth={1.8}/>
-    <Path d="M7 11V7a5 5 0 0110 0v4" stroke={Colors.primary} strokeWidth={1.8} strokeLinecap="round"/>
+    <Path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="#2D3E2B" strokeWidth={1.8} strokeLinecap="round"/>
+    <Circle cx={12} cy={7} r={4} stroke="#2D3E2B" strokeWidth={1.8}/>
   </Svg>
 );
 
@@ -63,61 +61,75 @@ const RegisterScreen: React.FC<{navigation: any}> = ({navigation}) => {
   };
 
   return (
-    <View style={s.root}>
-      <ScreenHeader title="Create Account" onBack={() => navigation.goBack()}/>
-
-      <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+    <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView contentContainerStyle={s.container} keyboardShouldPersistTaps="handled">
 
-        <View style={s.inputRow}>
-          <EmailIcon/>
-          <TextInput
-            style={s.input}
-            placeholder="Full Name"
-            placeholderTextColor="#9E9E9E"
-            value={name}
-            onChangeText={setName}
-            autoCapitalize="words"
-          />
-        </View>
+        <TouchableOpacity style={s.backBtn} onPress={() => navigation.goBack()} hitSlop={12}>
+          <BackIcon/>
+        </TouchableOpacity>
 
-        <View style={s.inputRow}>
-          <EmailIcon/>
-          <TextInput
-            style={s.input}
-            placeholder="Email"
-            placeholderTextColor="#9E9E9E"
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-        </View>
+        <Text style={s.title}>Create Account</Text>
+        <Text style={s.subtitle}>Join AlzApp:</Text>
 
-        <View style={s.inputRow}>
-          <LockIcon/>
-          <TextInput
-            style={s.input}
-            placeholder="Password"
-            placeholderTextColor="#9E9E9E"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
+        <View style={s.form}>
+          <View style={s.inputRow}>
+            <View style={s.iconAvatar}>
+              <PersonIcon/>
+            </View>
+            <TextInput
+              style={s.input}
+              placeholder="Full Name"
+              placeholderTextColor="#2D3E2B"
+              value={name}
+              onChangeText={setName}
+              autoCapitalize="words"
+            />
+          </View>
 
-        <View style={s.inputRow}>
-          <LockIcon/>
-          <TextInput
-            style={s.input}
-            placeholder="Confirm Password"
-            placeholderTextColor="#9E9E9E"
-            value={confirm}
-            onChangeText={setConfirm}
-            secureTextEntry
-            returnKeyType="done"
-            onSubmitEditing={handleRegister}
-          />
+          <View style={s.inputRow}>
+            <View style={s.iconAvatar}>
+              <Image source={require('../../../images/icon-email.png')} style={s.iconImage} resizeMode="contain"/>
+            </View>
+            <TextInput
+              style={s.input}
+              placeholder="Email"
+              placeholderTextColor="#2D3E2B"
+              value={email}
+              onChangeText={setEmail}
+              autoCapitalize="none"
+              keyboardType="email-address"
+            />
+          </View>
+
+          <View style={s.inputRow}>
+            <View style={s.iconAvatar}>
+              <Image source={require('../../../images/icon-lock.png')} style={s.iconImage} resizeMode="contain"/>
+            </View>
+            <TextInput
+              style={s.input}
+              placeholder="Password"
+              placeholderTextColor="#2D3E2B"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+          </View>
+
+          <View style={s.inputRow}>
+            <View style={s.iconAvatar}>
+              <Image source={require('../../../images/icon-lock.png')} style={s.iconImage} resizeMode="contain"/>
+            </View>
+            <TextInput
+              style={s.input}
+              placeholder="Confirm Password"
+              placeholderTextColor="#2D3E2B"
+              value={confirm}
+              onChangeText={setConfirm}
+              secureTextEntry
+              returnKeyType="done"
+              onSubmitEditing={handleRegister}
+            />
+          </View>
         </View>
 
         <Text style={s.termsText}>
@@ -155,61 +167,72 @@ const RegisterScreen: React.FC<{navigation: any}> = ({navigation}) => {
         </View>
 
       </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
 const s = StyleSheet.create({
-  root:      {flex: 1},
-  flex:      {flex: 1, backgroundColor: Colors.white},
-  container: {flexGrow: 1, paddingHorizontal: 28, paddingTop: 32, paddingBottom: 40},
+  flex:      {flex: 1, backgroundColor: '#FFFFFF'},
+  container: {flexGrow: 1, paddingHorizontal: 24, paddingTop: 60, paddingBottom: 40},
 
+  backBtn: {alignSelf: 'flex-start', marginBottom: 24, padding: 4},
+
+  title:    {fontSize: 24, fontWeight: '500', color: '#000000', marginBottom: 8},
+  subtitle: {fontSize: 16, fontWeight: '400', color: '#000000', marginBottom: 24},
+
+  form: {marginBottom: 4},
   inputRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.cardBackground,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    marginBottom: 12,
-    gap: 10,
+    backgroundColor: 'rgba(211, 200, 245, 0.26)',
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 10,
+    marginBottom: 14,
+    gap: 12,
   },
-  input: {flex: 1, fontSize: 15, color: Colors.text, padding: 0},
+  iconAvatar: {
+    width: 33, height: 33, borderRadius: 16.5,
+    backgroundColor: '#D3C9F5',
+    alignItems: 'center', justifyContent: 'center',
+  },
+  iconImage: {width: 18, height: 18},
+  input: {flex: 1, fontSize: 15, fontWeight: '600', color: '#2D3E2B', padding: 0},
 
   termsText: {
     textAlign: 'center',
     fontSize: 12,
-    color: Colors.textSecondary,
+    fontWeight: '500',
+    color: '#000000',
     lineHeight: 18,
     marginVertical: 16,
   },
 
   continueBtn: {
-    backgroundColor: Colors.primary,
-    borderRadius: 12,
+    backgroundColor: '#1F102B',
+    borderRadius: 10,
     paddingVertical: 16,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
   },
   btnDisabled:     {opacity: 0.6},
-  continueBtnText: {color: Colors.white, fontSize: 15, fontWeight: '800', letterSpacing: 1.2},
+  continueBtnText: {color: Colors.white, fontSize: 14, fontWeight: '500', letterSpacing: 1.2},
 
-  orText: {textAlign: 'center', fontSize: 13, color: Colors.textSecondary, marginBottom: 14},
+  orText: {textAlign: 'center', fontSize: 12, fontWeight: '500', color: '#000000', marginBottom: 14},
 
   phoneBtn: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 12,
+    backgroundColor: '#CFBCE3',
+    borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
     marginBottom: 24,
   },
-  phoneBtnText: {color: Colors.primary, fontSize: 14, fontWeight: '700', letterSpacing: 0.8},
+  phoneBtnText: {color: '#000000', fontSize: 14, fontWeight: '500', letterSpacing: 0.8},
 
-  loginRow:     {flexDirection: 'row', alignItems: 'center', justifyContent: 'center'},
-  loginText:    {fontSize: 14, color: Colors.textSecondary},
-  loginPill:    {backgroundColor: Colors.primaryLight, borderRadius: 16, paddingHorizontal: 14, paddingVertical: 6},
-  loginPillText:{fontSize: 13, fontWeight: '700', color: Colors.primary},
+  loginRow:     {flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start'},
+  loginText:    {fontSize: 12, fontWeight: '400', color: '#000000'},
+  loginPill:    {backgroundColor: 'rgba(211, 200, 245, 0.26)', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 6},
+  loginPillText:{fontSize: 13, fontWeight: '600', color: '#A18CE6'},
 });
 
 export default RegisterScreen;

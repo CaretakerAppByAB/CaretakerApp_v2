@@ -41,7 +41,7 @@ import ScreenHeader from '../components/ScreenHeader';
 // }
 // ─────────────────────────────────────────────────────────────────────────────
 
-const ResourceLibraryScreen = () => {
+const ResourceLibraryScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const openURL = (url: string) =>
     Linking.openURL(url).catch(() =>
       Alert.alert('Error', 'Could not open this link.'),
@@ -49,7 +49,7 @@ const ResourceLibraryScreen = () => {
 
   return (
     <View style={styles.screen}>
-      <ScreenHeader title="Support"/>
+      <ScreenHeader title="Mental Health Resources" onBack={() => navigation.goBack()}/>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.container}

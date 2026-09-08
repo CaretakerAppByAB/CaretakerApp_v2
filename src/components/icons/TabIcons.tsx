@@ -129,10 +129,10 @@ export const EnvelopeOpenIcon = ({size = 40, color = Colors.primary}: IconProps)
 
 export const CalendarIcon = ({color = '#000000', size = 24}: IconProps) => (
   <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <Rect x={3.5} y={5} width={17} height={15} rx={2.5} stroke={color} strokeWidth={1.7}/>
-    <Path d="M3.5 10h17" stroke={color} strokeWidth={1.7} strokeLinecap="round"/>
-    <Path d="M8 2.5v5" stroke={color} strokeWidth={1.7} strokeLinecap="round"/>
-    <Path d="M16 2.5v5" stroke={color} strokeWidth={1.7} strokeLinecap="round"/>
+    <Rect x={3.5} y={5} width={17} height={15} rx={2.5} stroke={color} strokeWidth={1.3}/>
+    <Path d="M3.5 10h17" stroke={color} strokeWidth={1.3} strokeLinecap="round"/>
+    <Path d="M8 2.5v5" stroke={color} strokeWidth={1.3} strokeLinecap="round"/>
+    <Path d="M16 2.5v5" stroke={color} strokeWidth={1.3} strokeLinecap="round"/>
   </Svg>
 );
 

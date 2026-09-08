@@ -9,7 +9,7 @@
  *  - Removed the inline custom `<View style={s.header}>` block so the native header rules the page.
  */
 
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
@@ -23,6 +23,7 @@ import {useAuth} from '../context/AuthContext';
 import ScreenHeader from '../components/ScreenHeader';
 import MoodFace from '../components/MoodFace';
 import {Colors} from '../theme/colors';
+import {DAILY_QUOTES} from '../constants/quotes';
 import {
   MoodType,
   MOOD_OPTIONS,
@@ -31,6 +32,18 @@ import {
   loadMonthMoods,
   shouldShowModal,
 } from '../services/moodService';
+
+// TODO: replace with the real "Tips to Refresh" copy once it's provided —
+// pulling from the Clash Royale trivia list as filler content for now.
+const pickRandomTips = (count: number): string[] => {
+  const pool = [...DAILY_QUOTES];
+  const picked: string[] = [];
+  while (picked.length < count && pool.length > 0) {
+    const i = Math.floor(Math.random() * pool.length);
+    picked.push(pool.splice(i, 1)[0]);
+  }
+  return picked;
+};
 
 const {width: SW} = Dimensions.get('window');
 
@@ -87,6 +100,7 @@ const MoodScreen: React.FC<{navigation: any}> = () => {
   const [month,     setMonth]     = useState(now.getMonth());
   const [moods,     setMoods]     = useState<Record<number, MoodType>>({});
   const [showModal, setShowModal] = useState(false);
+  const tips = useMemo(() => pickRandomTips(3), []);
 
   const refreshMoods = useCallback(async () => {
     setMoods(await loadMonthMoods(uid, year, month));
@@ -206,6 +220,18 @@ const MoodScreen: React.FC<{navigation: any}> = () => {
             )}
           </View>
 
+          {/* ── Tips to Refresh ── */}
+          <View style={s.card}>
+            <Text style={s.sectionTitle}>Tips to Refresh:</Text>
+            <View style={s.tipsRow}>
+              {tips.map((tip, i) => (
+                <View key={i} style={s.tipCard}>
+                  <Text style={s.tipText} numberOfLines={5}>{tip}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+
           <View style={{height: 16}}/>
         </ScrollView>
       </View>
@@ -294,6 +320,18 @@ const s = StyleSheet.create({
   barTrack:  {flex: 1, height: 12, backgroundColor: '#E8E8E8', borderRadius: 6, overflow: 'hidden'},
   barFill:   {height: '100%', borderRadius: 6},
   freqCount: {width: 20, fontSize: 11, fontWeight: '700', color: Colors.text, textAlign: 'right'},
+
+  // Tips to refresh
+  tipsRow: {flexDirection: 'row', gap: 8},
+  tipCard: {
+    flex: 1,
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    justifyContent: 'center',
+  },
+  tipText: {fontSize: 11, fontWeight: '600', color: Colors.text, textAlign: 'center'},
 });
 
 // Modal styles

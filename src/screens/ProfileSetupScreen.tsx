@@ -235,12 +235,12 @@ const cs = StyleSheet.create({
   container: {padding: 20, paddingBottom: 8},
 
   headerTitleSlot: {width: '100%', alignItems: 'center'},
-  headerTitle: {fontSize: 18, fontWeight: '700', color: Colors.white},
-  headerSub:   {fontSize: 12, fontWeight: '500', color: Colors.overlayLight, marginTop: 2, marginBottom: 10},
+  headerTitle: {fontSize: 18, fontWeight: '700', color: Colors.text},
+  headerSub:   {fontSize: 12, fontWeight: '500', color: Colors.textSecondary, marginTop: 2, marginBottom: 10},
 
   progressWrap:    {flexDirection: 'row', gap: 8, width: '100%'},
-  progressDot:     {flex: 1, height: 4, borderRadius: 2, backgroundColor: Colors.overlayButton},
-  progressDotActive:{backgroundColor: Colors.white},
+  progressDot:     {flex: 1, height: 4, borderRadius: 2, backgroundColor: Colors.primaryLight},
+  progressDotActive:{backgroundColor: Colors.primary},
 
   sectionLabel: {fontSize: 17, fontWeight: '700', color: Colors.text, marginBottom: 6},
   sectionSub:   {fontSize: 13, color: Colors.textSecondary, marginBottom: 16},

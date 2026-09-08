@@ -1,16 +1,23 @@
 // AlzApp Color Palette — Lavender/Purple Theme
-// Matched to the provided mockup wireframe
+// Updated to the darker primary-700 accent + white backgrounds from the latest Figma export
 
 export const Colors = {
   // Core brand
-  primary: '#8B7EEE',       // Main lavender-purple (buttons, accents)
-  primaryLight: '#EDE9FF',  // Soft lavender (backgrounds, chips)
-  primaryMedium: '#A89FF0', // Mid-tone purple (hover states)
-  primaryDark: '#6A5DD4',   // Deep purple (pressed states)
+  primary: '#1F102B',       // Deep purple — main accent (buttons, active states, badges)
+  primaryLight: '#EFE9F6',  // Soft lavender (chips, input fills)
+  primaryMedium: '#9462BD', // Mid-tone violet (hover / secondary accents)
+  primaryDark: '#150B1F',   // Near-black purple (pressed states)
+
+  // Figma purple scale (kept alongside the semantic names above for 1:1 handoff mapping)
+  primary100: '#EFE9F6',
+  primary200: '#CFBCE3',
+  primary400: '#9462BD',
+  primary600: '#432859',
+  primary700: '#1F102B',
 
   // Backgrounds
   background: '#FFFFFF',
-  backgroundLight: '#F5F3FF', // Very soft lavender page background
+  backgroundLight: '#FFFFFF', // Pages are plain white now — no more lavender page tint
 
   // Text
   text: '#1E1B3A',           // Almost-black indigo for readability

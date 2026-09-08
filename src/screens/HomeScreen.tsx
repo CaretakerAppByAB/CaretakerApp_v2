@@ -24,14 +24,14 @@ import {useAuth} from '../context/AuthContext';
 import Avatar from '../components/Avatar';
 import MoodFace from '../components/MoodFace';
 import {Colors} from '../theme/colors';
+import {CalendarIcon} from '../components/icons/TabIcons';
 import {
-  CalendarIcon,
-  JournalIcon,
-  CommunityIcon,
-  SupportIcon,
-  GratitudeIcon,
-  MessageBubbleIcon,
-} from '../components/icons/TabIcons';
+  JournalGridIcon,
+  CommunityGridIcon,
+  SupportGridIcon,
+  GratitudeGridIcon,
+  MessagesGridIcon,
+} from '../components/icons/HomeGridIcons';
 import {
   MoodType,
   MOOD_OPTIONS,
@@ -87,11 +87,11 @@ const MOOD_CIRCLE_SIZE = Math.floor(
 
 const GRID_ITEMS = [
   {screen: 'Mood',      label: 'Mood Calendar', Icon: CalendarIcon},
-  {screen: 'Journal',   label: 'My Journal',    Icon: JournalIcon},
-  {screen: 'Community', label: 'Community',     Icon: CommunityIcon},
-  {screen: 'Support',   label: 'Get Support',   Icon: SupportIcon},
-  {screen: 'Gratitude', label: 'Gratitude',     Icon: GratitudeIcon},
-  {screen: 'Messages',  label: 'Messages',      Icon: MessageBubbleIcon},
+  {screen: 'Journal',   label: 'My Journal',    Icon: JournalGridIcon},
+  {screen: 'Community', label: 'Community',     Icon: CommunityGridIcon},
+  {screen: 'Support',   label: 'Get Support',   Icon: SupportGridIcon},
+  {screen: 'Gratitude', label: 'Gratitude',     Icon: GratitudeGridIcon},
+  {screen: 'Messages',  label: 'Messages',      Icon: MessagesGridIcon},
 ];
 
 // ── Mood chart ─────────────────────────────────────────────────────────────────
@@ -208,7 +208,7 @@ const HomeScreen = ({navigation}: any) => {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
       <ScrollView
         style={styles.scroll}
         showsVerticalScrollIndicator={false}
@@ -223,7 +223,7 @@ const HomeScreen = ({navigation}: any) => {
             </Text>
           </View>
           <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
-            <Avatar name={displayName} size={40} variant="onDark"/>
+            <Avatar name={displayName} size={40}/>
           </TouchableOpacity>
         </View>
 
@@ -277,7 +277,7 @@ const HomeScreen = ({navigation}: any) => {
                   {/* Icon area */}
                   <View style={styles.tileIconArea}>
                     {item.Icon && (
-                      <item.Icon color={Colors.white} size={ICON_SIZE} />
+                      <item.Icon color={Colors.primary} size={ICON_SIZE} />
                     )}
                   </View>
                   {/* Label inside tile at bottom */}
@@ -330,7 +330,7 @@ const HomeScreen = ({navigation}: any) => {
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.white,
   },
   scroll: {
     flex: 1,
@@ -339,13 +339,15 @@ const styles = StyleSheet.create({
 
   // ── Header ──
   header: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.white,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 14,
     paddingBottom: 14,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E5E5',
   },
   headerTextCol: {
     flexShrink: 1,
@@ -354,13 +356,13 @@ const styles = StyleSheet.create({
   greeting: {
     fontSize: 20,
     fontWeight: '400',
-    color: Colors.white,
+    color: Colors.text,
     lineHeight: 28,
   },
   userName: {
     fontSize: 20,
     fontWeight: '400',
-    color: Colors.white,
+    color: Colors.text,
     lineHeight: 28,
   },
   userNameBold: {
@@ -452,7 +454,7 @@ const styles = StyleSheet.create({
   tileBox: {
     width: TILE_W,
     height: TILE_H,
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
     borderRadius: 12,
     overflow: 'hidden',
     alignItems: 'center',
@@ -465,7 +467,7 @@ const styles = StyleSheet.create({
   tileLabel: {
     fontSize: 10,
     fontWeight: '600',
-    color: Colors.white,
+    color: Colors.text,
     paddingBottom: 6,
     paddingHorizontal: 4,
     textAlign: 'center',

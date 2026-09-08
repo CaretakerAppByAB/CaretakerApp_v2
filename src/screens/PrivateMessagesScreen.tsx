@@ -19,7 +19,6 @@ import {
   TouchableOpacity,
   ScrollView,
   StyleSheet,
-  Dimensions,
   ActivityIndicator,
   Alert,
   Modal,
@@ -27,9 +26,9 @@ import {
   Platform,
 } from 'react-native';
 import Svg, {Path, Circle} from 'react-native-svg';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {useAuth} from '../context/AuthContext';
 import {ensureKeyPair} from '../services/e2eService';
-import ScreenHeader from '../components/ScreenHeader';
 import Avatar from '../components/Avatar';
 import {Colors} from '../theme/colors';
 import {
@@ -39,8 +38,6 @@ import {
   markConversationRead,
   ConversationSummary,
 } from '../services/messagingService';
-
-const {width: SW} = Dimensions.get('window');
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -130,10 +127,10 @@ const HeartFilled = () => (
 // Pencil / compose icon — added to the header
 const ComposeIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-    <Path d="M12 20h9" stroke="#fff" strokeWidth={1.6} strokeLinecap="round"/>
+    <Path d="M12 20h9" stroke={Colors.text} strokeWidth={1.6} strokeLinecap="round"/>
     <Path
       d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"
-      stroke="#fff" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"
+      stroke={Colors.text} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round"
     />
   </Svg>
 );
@@ -162,7 +159,10 @@ interface ConvRowProps {
 }
 
 const ConversationRow: React.FC<ConvRowProps> = ({conv, onPress}) => (
-  <TouchableOpacity style={s.convRow} onPress={onPress} activeOpacity={0.7}>
+  <TouchableOpacity
+    style={[s.convRow, conv.unread > 0 && s.convRowUnread]}
+    onPress={onPress}
+    activeOpacity={0.7}>
     <ConvAvatar conv={conv}/>
     <View style={s.convMiddle}>
       <Text style={s.convName} numberOfLines={1}>{conv.name}</Text>
@@ -313,7 +313,8 @@ const ComposeModal: React.FC<ComposeModalProps> = ({visible, currentUser, onClos
 const FILTERS: FilterType[] = ['All', 'Unread', 'Close friends'];
 
 const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
-  const {user} = useAuth();
+  const {user}   = useAuth();
+  const insets   = useSafeAreaInsets();
 
   // ── Firebase state ──
   const [conversations, setConversations] = useState<Conversation[]>([]);
@@ -390,15 +391,27 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
 
   return (
     <View style={s.screen}>
-      <ScreenHeader title="Messages"/>
-
       <ScrollView
         style={s.scroll}
         contentContainerStyle={s.container}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled">
 
-        {/* ── Search + compose ── */}
+        {/* ── Header ── */}
+        <View style={[s.titleRow, {marginTop: insets.top + 12}]}>
+          <View>
+            <Text style={s.pageTitle}>Messages</Text>
+            <Text style={s.pageSubtitle}>Stay connected</Text>
+          </View>
+          <TouchableOpacity
+            style={s.composeBtn}
+            onPress={() => setShowCompose(true)}
+            activeOpacity={0.7}>
+            <ComposeIcon/>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Search ── */}
         <View style={s.searchRow}>
           <View style={s.searchBar}>
             <SearchIcon/>
@@ -411,12 +424,6 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
               returnKeyType="search"
             />
           </View>
-          <TouchableOpacity
-            style={s.composeBtn}
-            onPress={() => setShowCompose(true)}
-            activeOpacity={0.7}>
-            <ComposeIcon/>
-          </TouchableOpacity>
         </View>
 
         {/* ── Filter pills ── */}
@@ -500,47 +507,43 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
 const AVATAR_SIZE = 48;
 
 const s = StyleSheet.create({
-  screen:    {flex: 1, backgroundColor: Colors.backgroundLight},
+  screen:    {flex: 1, backgroundColor: Colors.white},
   scroll:    {flex: 1},
   container: {paddingBottom: 24},
 
+  // ── Header ──
+  titleRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    marginBottom: 18,
+  },
+  pageTitle:    {fontSize: 30, fontWeight: '700', color: Colors.text},
+  pageSubtitle: {fontSize: 15, fontWeight: '400', color: Colors.textSecondary, marginTop: 2},
+
   composeBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: Colors.primary,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.08,
-    shadowRadius: 3,
-    elevation: 2,
   },
 
   // ── Search ──
   searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
     marginHorizontal: 20,
-    marginTop: 16,
     marginBottom: 14,
   },
   searchBar: {
-    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
+    backgroundColor: Colors.primaryLight,
     borderRadius: 24,
     paddingHorizontal: 14,
-    paddingVertical: 10,
+    paddingVertical: 12,
     gap: 8,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 3,
-    elevation: 2,
   },
   searchInput: {
     flex: 1,
@@ -558,25 +561,20 @@ const s = StyleSheet.create({
   },
   filterPill: {
     paddingHorizontal: 16,
-    paddingVertical: 7,
-    borderRadius: 20,
-    backgroundColor: Colors.white,
-    shadowColor: '#000',
-    shadowOffset: {width: 0, height: 1},
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: Colors.primaryLight,
   },
   filterPillActive: {backgroundColor: Colors.primary},
-  filterLabel: {fontSize: 13, fontWeight: '500', color: Colors.textSecondary},
+  filterLabel: {fontSize: 13, fontWeight: '500', color: Colors.text},
   filterLabelActive: {color: Colors.white, fontWeight: '700'},
 
   // ── Support banner ──
   supportBanner: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: Colors.white,
-    borderRadius: 14,
+    backgroundColor: '#E1E1E1',
+    borderRadius: 10,
     marginHorizontal: 20,
     marginBottom: 20,
     paddingHorizontal: 14,
@@ -585,16 +583,16 @@ const s = StyleSheet.create({
   },
   supportText:  {flex: 1},
   supportTitle: {fontSize: 14, fontWeight: '700', color: Colors.text},
-  supportSub:   {fontSize: 12, fontWeight: '400', color: Colors.textSecondary, marginTop: 2},
+  supportSub:   {fontSize: 12, fontWeight: '400', color: '#4E4E4E', marginTop: 2},
 
   // ── Section header ──
   sectionHeader: {paddingHorizontal: 20, marginBottom: 4},
   sectionTitle:  {fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 10},
-  sectionLine:   {height: StyleSheet.hairlineWidth, backgroundColor: Colors.border},
+  sectionLine:   {height: StyleSheet.hairlineWidth, backgroundColor: '#CCCCCC'},
 
   // ── Conversation list ──
   convList: {backgroundColor: Colors.white},
-  divider:  {height: StyleSheet.hairlineWidth, backgroundColor: '#E8E8E8', marginLeft: 80},
+  divider:  {height: StyleSheet.hairlineWidth, backgroundColor: '#DBDBDB', marginLeft: 80},
   empty:    {textAlign: 'center', color: Colors.textSecondary, marginTop: 32, fontSize: 14, lineHeight: 22},
 
   // ── Conversation row ──
@@ -602,12 +600,13 @@ const s = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingVertical: 12,
+    paddingVertical: 14,
     backgroundColor: Colors.white,
   },
+  convRowUnread: {backgroundColor: Colors.primaryLight, borderRadius: 10},
   avatarWrap:    {position: 'relative', marginRight: 12},
   avatar:        {width: AVATAR_SIZE, height: AVATAR_SIZE, borderRadius: AVATAR_SIZE / 2, alignItems: 'center', justifyContent: 'center'},
-  avatarSupport: {backgroundColor: Colors.primary},
+  avatarSupport: {backgroundColor: Colors.primary200},
   onlineDot: {
     position: 'absolute', bottom: 2, right: 2,
     width: 11, height: 11, borderRadius: 5.5,
@@ -636,7 +635,7 @@ const s = StyleSheet.create({
   modalLabel:  {fontSize: 13, fontWeight: '600', color: Colors.textSecondary, marginBottom: 10},
   modalSearchRow: {flexDirection: 'row', gap: 10, marginBottom: 16},
   modalInput: {
-    flex: 1, backgroundColor: Colors.backgroundLight, borderRadius: 12,
+    flex: 1, backgroundColor: Colors.primaryLight, borderRadius: 12,
     paddingHorizontal: 14, paddingVertical: 12,
     fontSize: 14, color: Colors.text,
   },
@@ -646,7 +645,7 @@ const s = StyleSheet.create({
   notFound:      {fontSize: 13, color: Colors.error, textAlign: 'center', lineHeight: 20},
   foundCard: {
     flexDirection: 'row', alignItems: 'center',
-    backgroundColor: Colors.backgroundLight, borderRadius: 14,
+    backgroundColor: Colors.primaryLight, borderRadius: 14,
     padding: 14, gap: 12, marginTop: 8,
   },
   foundInfo:       {flex: 1},

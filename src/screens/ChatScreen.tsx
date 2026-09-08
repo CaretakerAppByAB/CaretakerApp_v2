@@ -9,16 +9,18 @@ import React, {useState, useEffect, useRef, useMemo} from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, ScrollView,
   StyleSheet, KeyboardAvoidingView,
-  Platform, ActivityIndicator,
+  Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
-import Svg, {Path} from 'react-native-svg';
+import Svg, {Path, Circle} from 'react-native-svg';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import {useAuth} from '../context/AuthContext';
 import {EnvelopeOpenIcon} from '../components/icons/TabIcons';
 import ThankYouNoteOverlay from '../components/ThankYouNoteOverlay';
 import PHIWarningBanner from '../components/PHIWarningBanner';
 import ScreenHeader from '../components/ScreenHeader';
+import ChatDetailsModal from '../components/ChatDetailsModal';
+import AttachmentSheet from '../components/AttachmentSheet';
 import Avatar from '../components/Avatar';
 import {Colors} from '../theme/colors';
 import {detectPHI, redactPHI} from '../services/phiDetection';
@@ -38,8 +40,16 @@ const SendIcon = ({active}: {active: boolean}) => (
 
 const LockIcon = () => (
   <Svg width={11} height={11} viewBox="0 0 24 24" fill="none">
-    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke={Colors.overlayLight} strokeWidth={2}/>
-    <Path d="M7 11V7a5 5 0 0110 0v4" stroke={Colors.overlayLight} strokeWidth={2} strokeLinecap="round"/>
+    <Path d="M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2z" stroke={Colors.textSecondary} strokeWidth={2}/>
+    <Path d="M7 11V7a5 5 0 0110 0v4" stroke={Colors.textSecondary} strokeWidth={2} strokeLinecap="round"/>
+  </Svg>
+);
+
+const InfoIcon = () => (
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+    <Circle cx={12} cy={12} r={9} stroke={Colors.primary} strokeWidth={1.6}/>
+    <Path d="M12 11v5.5" stroke={Colors.primary} strokeWidth={1.6} strokeLinecap="round"/>
+    <Circle cx={12} cy={8} r={1} fill={Colors.primary}/>
   </Svg>
 );
 
@@ -81,6 +91,8 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
   const [sending,      setSending]      = useState(false);
   const [pendingNote,  setPendingNote]  = useState<PendingNote | null>(null);
   const [phiDismissed, setPhiDismissed] = useState(false);
+  const [showDetails,  setShowDetails]  = useState(false);
+  const [showAttach,   setShowAttach]   = useState(false);
   const scrollRef = useRef<ScrollView>(null);
   const insets = useSafeAreaInsets();
 
@@ -163,6 +175,23 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
     }
   };
 
+  // Sends immediately from the attachment sheet (activity invites, emoji picks)
+  const handleSendAttachmentText = async (text: string) => {
+    if (!user) return;
+    try {
+      await sendMessage(conversationId, user.uid, user.name, receiverId, text);
+    } catch {
+      Alert.alert('Error', 'Could not send. Check your connection.');
+    }
+  };
+
+  const handleThankYouNote = () => {
+    navigation.navigate('Gratitude', {
+      screen: 'ThankYouNote',
+      params: {receiverId, receiverName: name},
+    });
+  };
+
   return (
     <View style={s.safe}>
       <ThankYouNoteOverlay
@@ -172,20 +201,39 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
         onClose={handleCloseNote}
       />
 
+      <ChatDetailsModal
+        visible={showDetails}
+        name={name}
+        online={online}
+        onClose={() => setShowDetails(false)}
+      />
+
+      <AttachmentSheet
+        visible={showAttach}
+        onClose={() => setShowAttach(false)}
+        onSendText={handleSendAttachmentText}
+        onThankYouNote={handleThankYouNote}
+      />
+
       <ScreenHeader
         title={name}
         onBack={() => navigation.goBack()}
         titleSlot={
           <View style={s.headerTitleSlot}>
-            <Avatar name={name} size={36} variant="onDark"/>
+            <Avatar name={name} size={36}/>
             <View style={s.headerTitleText}>
               <Text style={s.headerName} numberOfLines={1}>{name}</Text>
-              <View style={s.encRow}>
-                <LockIcon/>
-                <Text style={s.encText}>End-to-end encrypted</Text>
+              <View style={s.statusRow}>
+                <View style={[s.statusDot, online && s.statusDotOnline]}/>
+                <Text style={s.statusText}>{online ? 'Online' : 'Offline'}</Text>
               </View>
             </View>
           </View>
+        }
+        rightElement={
+          <TouchableOpacity onPress={() => setShowDetails(true)} hitSlop={8}>
+            <InfoIcon/>
+          </TouchableOpacity>
         }
       />
 
@@ -195,6 +243,11 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
           style={s.msgList}
           contentContainerStyle={s.msgContent}
           showsVerticalScrollIndicator={false}>
+
+          <View style={s.encBanner}>
+            <LockIcon/>
+            <Text style={s.encBannerText}>Messages in this chat are end-to-end encrypted</Text>
+          </View>
 
           <View style={s.dateSep}><Text style={s.dateSepText}>Today</Text></View>
 
@@ -238,7 +291,7 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
 
         {/* Input bar */}
         <View style={[s.inputBar, {paddingBottom: 10 + insets.bottom}]}>
-          <TouchableOpacity style={s.addBtn} activeOpacity={0.7}>
+          <TouchableOpacity style={s.addBtn} activeOpacity={0.7} onPress={() => setShowAttach(true)}>
             <Text style={s.addBtnText}>+</Text>
           </TouchableOpacity>
           <View style={s.inputPill}>
@@ -279,12 +332,20 @@ const s = StyleSheet.create({
 
   headerTitleSlot: {flexDirection:'row', alignItems:'center', gap:8},
   headerTitleText: {},
-  headerName:      {fontSize:15, fontWeight:'700', color: Colors.white},
-  encRow:          {flexDirection:'row', alignItems:'center', gap:4, marginTop:2},
-  encText:         {fontSize:10, color: Colors.overlayLight, fontWeight:'600'},
+  headerName:      {fontSize:15, fontWeight:'700', color: Colors.text},
+  statusRow:       {flexDirection:'row', alignItems:'center', gap:5, marginTop:2},
+  statusDot:       {width:6, height:6, borderRadius:3, backgroundColor:'#BBBBBB'},
+  statusDotOnline: {backgroundColor: Colors.success},
+  statusText:      {fontSize:11, color: Colors.textSecondary, fontWeight:'500'},
 
   msgList:    {flex:1, backgroundColor: Colors.white},
   msgContent: {padding:16, paddingBottom:12},
+  encBanner: {
+    flexDirection:'row', alignItems:'center', justifyContent:'center', gap:6,
+    backgroundColor: Colors.primaryLight, borderRadius:10,
+    paddingVertical:8, paddingHorizontal:14, marginBottom:16,
+  },
+  encBannerText: {fontSize:11, color: Colors.textSecondary, fontWeight:'600', textAlign:'center', flexShrink:1},
   dateSep:    {alignItems:'center', marginBottom:20},
   dateSepText:{fontSize:12, color:'#9E9E9E', fontWeight:'500'},
   empty:      {textAlign:'center', color:'#BBBBBB', fontSize:14, marginTop:40},

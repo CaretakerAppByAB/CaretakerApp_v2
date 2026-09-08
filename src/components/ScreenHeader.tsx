@@ -8,7 +8,7 @@ const BackChevron: React.FC = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
     <Path
       d="M15 18l-6-6 6-6"
-      stroke={Colors.white}
+      stroke={Colors.primary}
       strokeWidth={2.2}
       strokeLinecap="round"
       strokeLinejoin="round"
@@ -38,7 +38,7 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
 
   return (
     <>
-      <StatusBar barStyle="light-content" backgroundColor={Colors.primary} />
+      <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
       <View style={[styles.bar, {paddingTop: insets.top + 12}]}>
         <View style={styles.row}>
           <View style={styles.side}>
@@ -77,9 +77,11 @@ const ScreenHeader: React.FC<ScreenHeaderProps> = ({
 
 const styles = StyleSheet.create({
   bar: {
-    backgroundColor: Colors.primary,
+    backgroundColor: Colors.white,
     paddingBottom: 14,
     paddingHorizontal: 16,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: '#E5E5E5',
   },
   row: {
     flexDirection: 'row',
@@ -96,7 +98,7 @@ const styles = StyleSheet.create({
     width: SIDE_SLOT,
     height: SIDE_SLOT,
     borderRadius: SIDE_SLOT / 2,
-    backgroundColor: Colors.overlayButton,
+    backgroundColor: Colors.primaryLight,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -107,12 +109,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    color: Colors.white,
+    color: Colors.text,
   },
   subtitle: {
     fontSize: 12,
     fontWeight: '500',
-    color: Colors.overlayLight,
+    color: Colors.textSecondary,
     marginTop: 2,
   },
 });

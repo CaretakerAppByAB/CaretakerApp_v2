@@ -112,7 +112,7 @@ const ThankYouNoteScreen: React.FC<{route: any; navigation: any}> = ({route, nav
         onBack={() => navigation.goBack()}
         titleSlot={
           <View style={s.headerTitleSlot}>
-            <Avatar name={receiverName} size={36} variant="onDark"/>
+            <Avatar name={receiverName} size={36}/>
             <Text style={s.headerName} numberOfLines={1}>{receiverName}</Text>
           </View>
         }
@@ -222,9 +222,9 @@ const s = StyleSheet.create({
   safe:  {flex: 1, backgroundColor: Colors.white},
   flex:  {flex: 1},
 
-  // Header (titleSlot content — sits on the purple ScreenHeader bar)
+  // Header (titleSlot content — sits on the white ScreenHeader bar)
   headerTitleSlot: {flexDirection: 'row', alignItems: 'center', gap: 8},
-  headerName:      {fontSize: 15, fontWeight: '700', color: Colors.white},
+  headerName:      {fontSize: 15, fontWeight: '700', color: Colors.text},
 
   // Scroll
   scroll:        {flex: 1},

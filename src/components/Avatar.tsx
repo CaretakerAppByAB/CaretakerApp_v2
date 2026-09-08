@@ -28,7 +28,7 @@ const Avatar: React.FC<AvatarProps> = ({name, size = 44, variant = 'onLight'}) =
           width: size,
           height: size,
           borderRadius: size / 2,
-          backgroundColor: onDark ? Colors.overlayButton : Colors.primaryLight,
+          backgroundColor: onDark ? Colors.overlayButton : Colors.primary200,
         },
       ]}>
       <Text
