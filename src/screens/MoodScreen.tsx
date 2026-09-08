@@ -91,7 +91,7 @@ const MoodCheckInModal: React.FC<{
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 
-const MoodScreen: React.FC<{navigation: any}> = () => {
+const MoodScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const {user} = useAuth();
   const uid = user?.uid ?? 'guest';
 
@@ -149,7 +149,7 @@ const MoodScreen: React.FC<{navigation: any}> = () => {
       <MoodCheckInModal visible={showModal} onSelect={handleSelect}/>
 
       <View style={s.safeArea}>
-        <ScreenHeader title="Mood Calendar"/>
+        <ScreenHeader title="Mood Calendar" onBack={() => navigation.navigate('Home')}/>
 
         <ScrollView
           style={s.scroll}
