@@ -32,12 +32,6 @@ const TrashIcon = () => (
   </Svg>
 );
 
-const SCOPE_TEXT: Record<SupportRequest['scope'], string> = {
-  circle: 'been sent to your circle',
-  local:  'been shared with your local community',
-  public: 'been posted to the public AlzApp community',
-};
-
 const SupportRequestConfirmationScreen: React.FC<{navigation: any; route: any}> = ({navigation, route}) => {
   const initialRequest: SupportRequest = route?.params?.request;
   const [request, setRequest] = useState(initialRequest);
@@ -70,7 +64,7 @@ const SupportRequestConfirmationScreen: React.FC<{navigation: any; route: any}> 
           text: 'Remove', style: 'destructive',
           onPress: async () => {
             try {
-              await deleteSupportRequest(request.id);
+              await deleteSupportRequest(request.id, request.postId);
               navigation.navigate('Home');
             } catch {
               Alert.alert('Error', 'Could not remove your request. Check your connection.');
@@ -90,8 +84,8 @@ const SupportRequestConfirmationScreen: React.FC<{navigation: any; route: any}> 
         </View>
         <Text style={s.title}>Request Sent!</Text>
         <Text style={s.subtitle}>
-          Your request for support has {SCOPE_TEXT[request.scope]}.{'\n\n'}
-          Check your messages for support from your community.
+          Your request has been posted anonymously to the community's Help/Advice board.{'\n\n'}
+          Check back on Submitted Requests to see the advice people leave.
         </Text>
 
         <Text style={s.sectionLabel}>Other Actions</Text>

@@ -10,6 +10,7 @@ import React, {useState, useEffect, useRef, useMemo} from 'react';
 import {
   View,
   Text,
+  Image,
   ScrollView,
   TextInput,
   TouchableOpacity,
@@ -29,6 +30,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import CommentsModal from '../components/CommentsModal';
 import Avatar from '../components/Avatar';
 import {Colors} from '../theme/colors';
+import {pickImageWithPrompt, uploadImage, PickedImage} from '../services/mediaService';
 import {
   subscribeToPosts,
   createPost,
@@ -71,19 +73,22 @@ interface PostCardProps {
 const PostCard: React.FC<PostCardProps> = ({post, liked, onLike, onComment}) => (
   <View style={s.card}>
     <View style={s.cardHeader}>
-      <Avatar name={post.authorName} size={AVATAR_SIZE}/>
+      <Avatar name={post.authorName} size={AVATAR_SIZE} photoURL={post.authorPhotoURL}/>
       <View style={s.authorInfo}>
         <Text style={s.authorName}>{post.authorName}</Text>
         <Text style={s.authorHandle}>{post.authorHandle}</Text>
       </View>
-      {post.tab === 'Events' && (
-        <View style={s.eventBadge}>
-          <Text style={s.eventBadgeText}>Event</Text>
+      {post.tab === 'Help/Advice' && (
+        <View style={[s.eventBadge, post.resolved && s.resolvedBadge]}>
+          <Text style={s.eventBadgeText}>{post.resolved ? 'Resolved' : 'Help/Advice'}</Text>
         </View>
       )}
     </View>
 
-    <Text style={s.content}>{post.content}</Text>
+    {!!post.content && <Text style={s.content}>{post.content}</Text>}
+    {!!post.imageUrl && (
+      <Image source={{uri: post.imageUrl}} style={s.postImage} resizeMode="cover"/>
+    )}
 
     <View style={s.cardFooter}>
       <TouchableOpacity style={s.likeRow} onPress={onLike} activeOpacity={0.7}>
@@ -102,18 +107,20 @@ const PostCard: React.FC<PostCardProps> = ({post, liked, onLike, onComment}) => 
 // ── New-post modal ─────────────────────────────────────────────────────────────
 
 interface NewPostModalProps {
-  visible:    boolean;
-  authorName: string;
+  visible:        boolean;
+  authorName:     string;
+  authorPhotoURL?: string;
   onClose:    () => void;
   onPosted:   (tab: TabName) => void;
 }
 
 const NewPostModal: React.FC<NewPostModalProps> = ({
-  visible, authorName, onClose, onPosted,
+  visible, authorName, authorPhotoURL, onClose, onPosted,
 }) => {
   const [content,  setContent]  = useState('');
   const [tab,      setTab]      = useState<TabName>('Trending');
   const [posting,  setPosting]  = useState(false);
+  const [image,    setImage]    = useState<PickedImage | null>(null);
 
   // Community posts are PUBLIC and cannot be encrypted.
   // PHI here is BLOCKING, not advisory.
@@ -131,13 +138,19 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
     if (visible) {
       setContent('');
       setTab('Trending');
+      setImage(null);
       setTimeout(() => inputRef.current?.focus(), 300);
     }
   }, [visible]);
 
+  const handlePickImage = async () => {
+    const picked = await pickImageWithPrompt();
+    if (picked) setImage(picked);
+  };
+
   const submit = async () => {
-    if (!content.trim()) {
-      Alert.alert('Empty post', 'Please write something before posting.');
+    if (!content.trim() && !image) {
+      Alert.alert('Empty post', 'Please write something or attach a photo before posting.');
       return;
     }
     if (hasPHI) {
@@ -150,9 +163,11 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
     }
     setPosting(true);
     try {
-      await createPost(authorName, content, tab);
+      const imageUrl = image ? await uploadImage(image, 'postImages') : undefined;
+      await createPost(authorName, content, tab, imageUrl, authorPhotoURL);
       onPosted(tab);
     } catch (err: any) {
+      console.error('[CommunityForumScreen] post failed:', err);
       const msg = err?.message ?? '';
       if (msg.includes('400') || msg.includes('projectId')) {
         Alert.alert(
@@ -160,14 +175,14 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
           'Open src/config/firebase.ts and paste your Firebase project config values.',
         );
       } else {
-        Alert.alert('Error', 'Could not post. Check your internet connection.');
+        Alert.alert('Could not post', msg || 'Check your internet connection.');
       }
     } finally {
       setPosting(false);
     }
   };
 
-  const TAB_OPTIONS: TabName[] = ['Trending', 'Following', 'Events'];
+  const TAB_OPTIONS: TabName[] = ['Trending', 'Help/Advice'];
 
   return (
     <Modal visible={visible} transparent animationType="slide">
@@ -185,7 +200,7 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
             <TouchableOpacity
               style={[s.postBtn, (posting || hasPHI) && s.postBtnDisabled]}
               onPress={submit}
-              disabled={posting || !content.trim() || hasPHI}>
+              disabled={posting || (!content.trim() && !image) || hasPHI}>
               {posting
                 ? <ActivityIndicator color="#fff" size="small"/>
                 : <Text style={s.postBtnText}>Post</Text>
@@ -195,7 +210,7 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
 
           {/* Author preview */}
           <View style={s.modalAuthorRow}>
-            <Avatar name={authorName} size={AVATAR_SIZE}/>
+            <Avatar name={authorName} size={AVATAR_SIZE} photoURL={authorPhotoURL}/>
             <View>
               <Text style={s.modalAuthorName}>{authorName}</Text>
               <Text style={s.modalAuthorSub}>Sharing with the community</Text>
@@ -232,6 +247,20 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
           {/* Character counter */}
           <Text style={s.charCount}>{content.length}/1000</Text>
 
+          {/* Photo attachment */}
+          {image ? (
+            <View style={s.imagePreviewWrap}>
+              <Image source={{uri: image.uri}} style={s.imagePreview} resizeMode="cover"/>
+              <TouchableOpacity style={s.removeImageBtn} onPress={() => setImage(null)} activeOpacity={0.8}>
+                <Text style={s.removeImageBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity style={s.photoBtn} onPress={handlePickImage} activeOpacity={0.75}>
+              <Text style={s.photoBtnText}>📷 Add Photo</Text>
+            </TouchableOpacity>
+          )}
+
           {/* Tab selector */}
           <Text style={s.tabSelectorLabel}>Post to:</Text>
           <View style={s.tabSelector}>
@@ -254,9 +283,9 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
 
 // ── Main screen ────────────────────────────────────────────────────────────────
 
-const TABS: TabName[] = ['Trending', 'Following', 'Events'];
+const TABS: TabName[] = ['Trending', 'Help/Advice'];
 
-const CommunityForumScreen: React.FC = () => {
+const CommunityForumScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const {user}              = useAuth();
   const authorName          = user?.name ?? user?.email?.split('@')[0] ?? 'Anonymous';
 
@@ -357,7 +386,7 @@ const CommunityForumScreen: React.FC = () => {
 
   return (
     <View style={s.screen}>
-      <ScreenHeader title="Community"/>
+      <ScreenHeader title="Community" onBack={() => navigation.navigate('Home')}/>
 
       {/* Tab strip */}
       <View style={s.tabStrip}>
@@ -421,6 +450,7 @@ const CommunityForumScreen: React.FC = () => {
       <NewPostModal
         visible={showNewPost}
         authorName={authorName}
+        authorPhotoURL={user?.profilePhotoURL}
         onClose={() => setShowNewPost(false)}
         onPosted={handlePosted}
       />
@@ -430,6 +460,7 @@ const CommunityForumScreen: React.FC = () => {
         visible={!!commentsPostId}
         postId={commentsPostId}
         authorName={authorName}
+        authorPhotoURL={user?.profilePhotoURL}
         onClose={() => setCommentsPostId(null)}
       />
     </View>
@@ -487,8 +518,10 @@ const s = StyleSheet.create({
     backgroundColor: Colors.primary, borderRadius: 8,
     paddingHorizontal: 8, paddingVertical: 2, marginRight: 6,
   },
+  resolvedBadge: {backgroundColor: '#9E9E9E'},
   eventBadgeText: {fontSize: 10, fontWeight: '700', color: Colors.white},
   content: {fontSize: 13, lineHeight: 20, color: Colors.text, marginBottom: 12},
+  postImage: {width: '100%', height: 200, borderRadius: 10, marginBottom: 12, backgroundColor: '#E8E8E8'},
   cardFooter: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
   },
@@ -544,6 +577,19 @@ const s = StyleSheet.create({
   charCount: {
     textAlign: 'right', fontSize: 11, color: '#BBBBBB', marginTop: 6,
   },
+  photoBtn: {
+    backgroundColor: Colors.primaryLight, borderRadius: 12,
+    paddingVertical: 12, alignItems: 'center', marginTop: 12,
+  },
+  photoBtnText: {fontSize: 13, fontWeight: '600', color: Colors.text},
+  imagePreviewWrap: {marginTop: 12, position: 'relative'},
+  imagePreview: {width: '100%', height: 180, borderRadius: 12, backgroundColor: '#E8E8E8'},
+  removeImageBtn: {
+    position: 'absolute', top: 8, right: 8,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center',
+  },
+  removeImageBtnText: {color: Colors.white, fontSize: 13, fontWeight: '700'},
   publicNotice: {
     backgroundColor: '#EEF4FD', borderRadius: 10,
     paddingHorizontal: 12, paddingVertical: 9, marginBottom: 12,

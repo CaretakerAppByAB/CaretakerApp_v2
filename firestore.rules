@@ -8,8 +8,11 @@ service cloud.firestore {
                     && request.resource.data.content.size() > 0
                     && request.resource.data.content.size() <= 1000;
       allow update: if request.resource.data.diff(resource.data)
-                      .affectedKeys().hasOnly(['likedBy', 'likeCount', 'commentCount']);
-      allow delete: if false;
+                      .affectedKeys().hasOnly(['likedBy', 'likeCount', 'commentCount', 'resolved', 'content', 'imageUrl']);
+      // Posts are public and unauthenticated, same as create/update above —
+      // deletion is needed so a removed "Get Support" request can clean up
+      // its linked Help/Advice post.
+      allow delete: if true;
 
       // Comments are public, same as the post they belong to — no auth
       // required, matching the rest of the Community forum.
@@ -62,19 +65,18 @@ service cloud.firestore {
                          && request.auth.uid == userId;
     }
 
-    // "Get Support" requests. Circle-only requests are visible only to their
-    // author (we don't have a circle-membership collection to check against
-    // yet); local/public requests are visible to any signed-in user.
+    // "Get Support" requests. Every request is now posted publicly and
+    // anonymously to the Community forum's Help/Advice tab (see /posts
+    // above), so any signed-in user can read the request list itself too —
+    // there is no more private "circle" scope.
     match /supportRequests/{requestId} {
-      allow read: if request.auth != null
-                  && (request.auth.uid == resource.data.authorId
-                      || resource.data.scope != 'circle');
+      allow read: if request.auth != null;
       allow create: if request.auth != null
                     && request.resource.data.authorId == request.auth.uid
                     && request.resource.data.title is string
                     && request.resource.data.title.size() > 0
                     && request.resource.data.title.size() <= 100
-                    && request.resource.data.scope in ['circle', 'local', 'public'];
+                    && request.resource.data.postId is string;
       allow update: if request.auth != null
                     && request.auth.uid == resource.data.authorId;
       allow delete: if request.auth != null

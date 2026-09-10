@@ -6,7 +6,7 @@
 
 import React, {useState, useEffect, useMemo} from 'react';
 import {
-  Modal, View, Text, TextInput, TouchableOpacity, ScrollView,
+  Modal, View, Text, TextInput, TouchableOpacity, ScrollView, Image,
   StyleSheet, ActivityIndicator, KeyboardAvoidingView, Platform, Alert,
 } from 'react-native';
 import Svg, {Path} from 'react-native-svg';
@@ -15,6 +15,7 @@ import PHIWarningBanner from './PHIWarningBanner';
 import {Colors} from '../theme/colors';
 import {detectPHI, redactPHI} from '../services/phiDetection';
 import {subscribeToComments, addComment, Comment} from '../services/communityService';
+import {pickImageWithPrompt, uploadImage, PickedImage} from '../services/mediaService';
 
 const CloseIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -42,19 +43,21 @@ const timeAgo = (ms: number): string => {
 };
 
 interface CommentsModalProps {
-  visible:    boolean;
-  postId:     string | null;
-  authorName: string;
-  onClose:    () => void;
+  visible:         boolean;
+  postId:          string | null;
+  authorName:      string;
+  authorPhotoURL?: string;
+  onClose:         () => void;
 }
 
-const CommentsModal: React.FC<CommentsModalProps> = ({visible, postId, authorName, onClose}) => {
+const CommentsModal: React.FC<CommentsModalProps> = ({visible, postId, authorName, authorPhotoURL, onClose}) => {
   const [comments, setComments] = useState<Comment[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [text,     setText]     = useState('');
   const [sending,  setSending]  = useState(false);
   const [phiDismissed, setPhiDismissed] = useState(false);
+  const [image, setImage] = useState<PickedImage | null>(null);
 
   const phiMatches = useMemo(
     () => (phiDismissed || text.length < 4 ? [] : detectPHI(text)),
@@ -76,6 +79,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({visible, postId, authorNam
 
   const close = () => {
     setText('');
+    setImage(null);
     setPhiDismissed(false);
     onClose();
   };
@@ -85,12 +89,22 @@ const CommentsModal: React.FC<CommentsModalProps> = ({visible, postId, authorNam
     setPhiDismissed(true);
   };
 
+  const handleAttachPress = async () => {
+    const picked = await pickImageWithPrompt();
+    if (picked) setImage(picked);
+  };
+
   const handleSend = async () => {
-    if (!postId || !text.trim() || sending || hasPHI) return;
+    if (!postId || (!text.trim() && !image) || sending || hasPHI) return;
     setSending(true);
     try {
-      await addComment(postId, authorName, text.trim());
+      let imageUrl: string | undefined;
+      if (image) {
+        imageUrl = await uploadImage(image, 'commentImages');
+      }
+      await addComment(postId, authorName, text.trim(), imageUrl, authorPhotoURL);
       setText('');
+      setImage(null);
     } catch (err: any) {
       Alert.alert('Could not send comment', err?.message ?? 'Check your connection and try again.');
     } finally {
@@ -123,11 +137,14 @@ const CommentsModal: React.FC<CommentsModalProps> = ({visible, postId, authorNam
             ) : (
               comments.map(c => (
                 <View key={c.id} style={s.commentRow}>
-                  <Avatar name={c.authorName} size={34}/>
+                  <Avatar name={c.authorName} size={34} photoURL={c.authorPhotoURL}/>
                   <View style={s.commentBody}>
                     <View style={s.commentBubble}>
                       <Text style={s.commentAuthor}>{c.authorName}</Text>
-                      <Text style={s.commentText}>{c.content}</Text>
+                      {!!c.content && <Text style={s.commentText}>{c.content}</Text>}
+                      {!!c.imageUrl && (
+                        <Image source={{uri: c.imageUrl}} style={s.commentImage} resizeMode="cover"/>
+                      )}
                     </View>
                     <Text style={s.commentTime}>{timeAgo(c.createdAt)}</Text>
                   </View>
@@ -141,7 +158,19 @@ const CommentsModal: React.FC<CommentsModalProps> = ({visible, postId, authorNam
             <PHIWarningBanner matches={phiMatches} onRedact={handleRedact} variant="block"/>
           )}
 
+          {image && (
+            <View style={s.imagePreviewWrap}>
+              <Image source={{uri: image.uri}} style={s.imagePreview} resizeMode="cover"/>
+              <TouchableOpacity style={s.removeImageBtn} onPress={() => setImage(null)} activeOpacity={0.8}>
+                <Text style={s.removeImageBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           <View style={s.inputRow}>
+            <TouchableOpacity style={s.attachBtn} onPress={handleAttachPress} activeOpacity={0.7}>
+              <Text style={s.attachBtnText}>📷</Text>
+            </TouchableOpacity>
             <TextInput
               style={s.input}
               placeholder="Add a comment..."
@@ -154,11 +183,11 @@ const CommentsModal: React.FC<CommentsModalProps> = ({visible, postId, authorNam
             <TouchableOpacity
               style={s.sendBtn}
               onPress={handleSend}
-              disabled={!text.trim() || sending || hasPHI}
+              disabled={(!text.trim() && !image) || sending || hasPHI}
               activeOpacity={0.7}>
               {sending
                 ? <ActivityIndicator size="small" color={Colors.primary}/>
-                : <SendIcon active={!!text.trim() && !hasPHI}/>
+                : <SendIcon active={(!!text.trim() || !!image) && !hasPHI}/>
               }
             </TouchableOpacity>
           </View>
@@ -192,7 +221,17 @@ const s = StyleSheet.create({
   commentBubble: {backgroundColor: Colors.primaryLight, borderRadius: 14, borderTopLeftRadius: 4, padding: 10},
   commentAuthor: {fontSize: 12, fontWeight: '700', color: Colors.text, marginBottom: 2},
   commentText: {fontSize: 13, color: Colors.text, lineHeight: 18},
+  commentImage: {width: '100%', height: 140, borderRadius: 10, marginTop: 6, backgroundColor: '#E0E0E0'},
   commentTime: {fontSize: 10, color: Colors.textSecondary, marginTop: 3, marginLeft: 2},
+
+  imagePreviewWrap: {marginBottom: 10, position: 'relative'},
+  imagePreview: {width: '100%', height: 140, borderRadius: 12, backgroundColor: '#E8E8E8'},
+  removeImageBtn: {
+    position: 'absolute', top: 8, right: 8,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center',
+  },
+  removeImageBtnText: {color: Colors.white, fontSize: 13, fontWeight: '700'},
 
   inputRow: {
     flexDirection: 'row', alignItems: 'flex-end', gap: 10,
@@ -200,6 +239,8 @@ const s = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#E5E5E5',
     paddingBottom: Platform.OS === 'ios' ? 24 : 12,
   },
+  attachBtn: {paddingBottom: 10},
+  attachBtnText: {fontSize: 20},
   input: {
     flex: 1, backgroundColor: Colors.primaryLight, borderRadius: 20,
     paddingHorizontal: 14, paddingVertical: 10,

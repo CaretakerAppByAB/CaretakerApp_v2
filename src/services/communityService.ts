@@ -14,6 +14,7 @@ import {
   orderBy,
   limit,
   updateDoc,
+  deleteDoc,
   doc,
   arrayUnion,
   arrayRemove,
@@ -25,27 +26,32 @@ import {db} from '../config/firebase';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type TabName = 'Trending' | 'Following' | 'Events';
+export type TabName = 'Trending' | 'Help/Advice';
 
 export interface Post {
-  id:           string;
-  authorId:     string;    // unique device ID (not a real user ID yet)
-  authorName:   string;
-  authorHandle: string;
-  content:      string;
-  tab:          TabName;
-  likedBy:      string[];  // list of deviceIds who liked this post
-  likeCount:    number;
-  commentCount: number;
-  createdAt:    number;    // Unix timestamp — used for ordering
+  id:              string;
+  authorId:        string;    // unique device ID (not a real user ID yet)
+  authorName:      string;
+  authorHandle:    string;
+  authorPhotoURL?: string;
+  content:         string;
+  imageUrl?:       string;
+  tab:             TabName;
+  likedBy:         string[];  // list of deviceIds who liked this post
+  likeCount:       number;
+  commentCount:    number;
+  resolved:        boolean;   // true once a linked support request is marked resolved
+  createdAt:       number;    // Unix timestamp — used for ordering
 }
 
 export interface Comment {
-  id:         string;
-  authorId:   string;
-  authorName: string;
-  content:    string;
-  createdAt:  number;
+  id:              string;
+  authorId:        string;
+  authorName:      string;
+  authorPhotoURL?: string;
+  content:         string;
+  imageUrl?:       string;
+  createdAt:       number;
 }
 
 // ── Device ID ──────────────────────────────────────────────────────────────────
@@ -111,22 +117,19 @@ export const subscribeToPosts = (
         likedBy:      [],
         likeCount:    0,
         commentCount: 0,
+        resolved:     false as boolean,
         tab:          'Trending' as TabName,
         ...d.data(),
         id: d.id,
-      })) as Post[];
+      })) as unknown as Post[];
 
       let result: Post[];
       if (tab === 'Trending') {
         // All posts, sorted so the most-liked appear first
         result = [...all].sort((a, b) => b.likeCount - a.likeCount);
-      } else if (tab === 'Events') {
-        // Only posts the author tagged as Events, newest first
-        result = all.filter(p => p.tab === 'Events');
       } else {
-        // Following: show everything newest-first
-        // (in production you'd filter by who the user follows)
-        result = all;
+        // Help/Advice: only posts tagged as such, newest first
+        result = all.filter(p => p.tab === 'Help/Advice');
       }
 
       onUpdate(result);
@@ -138,10 +141,12 @@ export const subscribeToPosts = (
 // ── Create a new post ──────────────────────────────────────────────────────────
 
 export const createPost = async (
-  authorName: string,
-  content:    string,
-  tab:        TabName,
-): Promise<void> => {
+  authorName:     string,
+  content:        string,
+  tab:            TabName,
+  imageUrl?:      string,
+  authorPhotoURL?: string,
+): Promise<string> => {
   const authorId = await getDeviceId();
 
   // Build @handle from the display name
@@ -152,18 +157,36 @@ export const createPost = async (
       .replace(/\s+/g, '.')
       .replace(/[^a-z0-9.]/g, '') || 'user';
 
-  await addDoc(collection(db, 'posts'), {
+  const ref = await addDoc(collection(db, 'posts'), {
     authorId,
     authorName,
     authorHandle: handle,
+    ...(authorPhotoURL ? {authorPhotoURL} : {}),
     content:      content.trim(),
+    ...(imageUrl ? {imageUrl} : {}),
     tab,
     likedBy:      [],
     likeCount:    0,
     commentCount: 0,
+    resolved:     false,
     createdAt:    Date.now(),        // client timestamp — used for ordering
     timestamp:    serverTimestamp(), // server timestamp — more accurate, set by Firebase
   });
+  return ref.id;
+};
+
+// ── Support-request-linked post helpers ───────────────────────────────────────
+
+export const updatePostContent = async (postId: string, content: string, imageUrl?: string): Promise<void> => {
+  await updateDoc(doc(db, 'posts', postId), {content: content.trim(), ...(imageUrl ? {imageUrl} : {})});
+};
+
+export const setPostResolved = async (postId: string, resolved: boolean): Promise<void> => {
+  await updateDoc(doc(db, 'posts', postId), {resolved});
+};
+
+export const deletePost = async (postId: string): Promise<void> => {
+  await deleteDoc(doc(db, 'posts', postId));
 };
 
 // ── Toggle like ────────────────────────────────────────────────────────────────
@@ -210,15 +233,19 @@ export const subscribeToComments = (
 };
 
 export const addComment = async (
-  postId:     string,
-  authorName: string,
-  content:    string,
+  postId:          string,
+  authorName:      string,
+  content:         string,
+  imageUrl?:       string,
+  authorPhotoURL?: string,
 ): Promise<void> => {
   const authorId = await getDeviceId();
   await addDoc(collection(db, 'posts', postId, 'comments'), {
     authorId,
     authorName,
+    ...(authorPhotoURL ? {authorPhotoURL} : {}),
     content:   content.trim(),
+    ...(imageUrl ? {imageUrl} : {}),
     createdAt: Date.now(),
     timestamp: serverTimestamp(),
   });

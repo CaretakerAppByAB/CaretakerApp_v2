@@ -18,13 +18,14 @@ import {encryptForUser, decryptFromUser, ensureKeyPair} from './e2eService';
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-export type MessageType = 'text' | 'thankYouNote';
+export type MessageType = 'text' | 'thankYouNote' | 'image';
 
 export interface Message {
   id:           string;
   senderId:     string;
   senderName:   string;
   text:         string;        // decrypted in memory
+  imageUrl?:    string;        // decrypted in memory — only set for messageType 'image'
   createdAt:    number;
   messageType?: MessageType;
   wasEncrypted?: boolean;
@@ -32,7 +33,7 @@ export interface Message {
 
 export interface ConversationSummary {
   id:            string;
-  otherUser:     {uid: string; name: string; handle: string};
+  otherUser:     {uid: string; name: string; handle: string; photoURL?: string};
   lastMessage:   string;       // decrypted in memory
   lastMessageAt: number;
   unread:        number;
@@ -65,8 +66,8 @@ export const getOrCreateConversation = async (
     await setDoc(ref, {
       participants: [currentUser.uid, otherUser.uid],
       participantData: {
-        [currentUser.uid]: {name: currentUser.name, handle: currentUser.handle},
-        [otherUser.uid]:   {name: otherUser.name,   handle: otherUser.handle},
+        [currentUser.uid]: {name: currentUser.name, handle: currentUser.handle, photoURL: currentUser.profilePhotoURL ?? ''},
+        [otherUser.uid]:   {name: otherUser.name,   handle: otherUser.handle,   photoURL: otherUser.profilePhotoURL ?? ''},
       },
       lastMessage:   '',
       lastMessageAt: Date.now(),
@@ -97,7 +98,7 @@ export const subscribeToConversations = (
           snapshot.docs.map(async d => {
             const data     = d.data();
             const otherUid = (data.participants as string[]).find(p => p !== userId) ?? '';
-            const other    = data.participantData?.[otherUid] ?? {name: 'Unknown', handle: '@unknown'};
+            const other    = data.participantData?.[otherUid] ?? {name: 'Unknown', handle: '@unknown', photoURL: ''};
 
             // Decrypt the inbox preview
             const lastMessage = await decryptFromUser(
@@ -106,7 +107,7 @@ export const subscribeToConversations = (
 
             return {
               id:            d.id,
-              otherUser:     {uid: otherUid, name: other.name, handle: other.handle},
+              otherUser:     {uid: otherUid, name: other.name, handle: other.handle, photoURL: other.photoURL || undefined},
               lastMessage,
               lastMessageAt: data.lastMessageAt ?? 0,
               unread:        data.unreadCounts?.[userId] ?? 0,
@@ -149,11 +150,15 @@ export const subscribeToMessages = (
           snapshot.docs.map(async d => {
             const data = d.data();
             const text = await decryptFromUser(data.text ?? '', myUserId, otherUserId);
+            const imageUrl = data.imageUrl
+              ? await decryptFromUser(data.imageUrl, myUserId, otherUserId)
+              : undefined;
             return {
               id:           d.id,
               senderId:     data.senderId,
               senderName:   data.senderName,
               text,
+              imageUrl,
               createdAt:    data.createdAt ?? 0,
               messageType:  data.messageType ?? 'text',
               wasEncrypted: data.encrypted ?? false,
@@ -178,16 +183,26 @@ export const sendMessage = async (
   receiverId:     string,
   text:           string,
   messageType:    MessageType = 'text',
+  imageUrl?:      string,
 ): Promise<void> => {
   const now = Date.now();
 
   // Encrypt the body for the recipient (readable by both parties only)
   const {ciphertext, encrypted} = await encryptForUser(text.trim(), senderId, receiverId);
 
+  // The image itself lives in Firebase Storage as a plain file (not E2E
+  // encrypted); only the pointer to it is encrypted here, same as the text.
+  let encImageUrl: string | undefined;
+  if (imageUrl) {
+    const {ciphertext: encUrl} = await encryptForUser(imageUrl, senderId, receiverId);
+    encImageUrl = encUrl;
+  }
+
   await addDoc(collection(db, 'conversations', conversationId, 'messages'), {
     senderId,
     senderName,
     text:        ciphertext,
+    ...(encImageUrl ? {imageUrl: encImageUrl} : {}),
     encrypted,
     messageType,
     createdAt:   now,
@@ -198,6 +213,8 @@ export const sendMessage = async (
   // the conversation document in plaintext.
   const previewPlain = messageType === 'thankYouNote'
     ? 'Thank You Note'
+    : messageType === 'image'
+    ? (text.trim() ? `📷 ${text.trim()}` : '📷 Photo')
     : text.trim();
   const {ciphertext: encPreview} = await encryptForUser(previewPlain, senderId, receiverId);
 

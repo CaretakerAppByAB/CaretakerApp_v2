@@ -223,7 +223,7 @@ const HomeScreen = ({navigation}: any) => {
             </Text>
           </View>
           <TouchableOpacity onPress={() => navigation.navigate('Profile')} activeOpacity={0.8}>
-            <Avatar name={displayName} size={40}/>
+            <Avatar name={displayName} size={40} photoURL={user?.profilePhotoURL}/>
           </TouchableOpacity>
         </View>
 
@@ -264,31 +264,6 @@ const HomeScreen = ({navigation}: any) => {
             </Text>
           )}
 
-          <View style={styles.divider} />
-
-          {/* 3×2 grid — labels inside tiles */}
-          <View style={styles.grid}>
-            {GRID_ITEMS.map((item, i) => (
-              <TouchableOpacity
-                key={i}
-                activeOpacity={0.75}
-                onPress={() => navigation.navigate(item.screen)}>
-                <View style={styles.tileBox}>
-                  {/* Icon area */}
-                  <View style={styles.tileIconArea}>
-                    {item.Icon && (
-                      <item.Icon color={Colors.primary} size={ICON_SIZE} />
-                    )}
-                  </View>
-                  {/* Label inside tile at bottom */}
-                  <Text style={styles.tileLabel} numberOfLines={1}>
-                    {item.label}
-                  </Text>
-                </View>
-              </TouchableOpacity>
-            ))}
-          </View>
-
         </View>
 
         {/* ── Mood Analysis ── */}
@@ -312,6 +287,31 @@ const HomeScreen = ({navigation}: any) => {
           </View>
           <MoodLineChart weekMoods={weekMoods}/>
           <View style={{height: 6}} />
+        </View>
+
+        {/* ── 3×2 grid — labels inside tiles ── */}
+        <View style={styles.whiteSection}>
+          <View style={styles.grid}>
+            {GRID_ITEMS.map((item, i) => (
+              <TouchableOpacity
+                key={i}
+                activeOpacity={0.75}
+                onPress={() => navigation.navigate(item.screen)}>
+                <View style={styles.tileBox}>
+                  {/* Icon area */}
+                  <View style={styles.tileIconArea}>
+                    {item.Icon && (
+                      <item.Icon color={Colors.primary} size={ICON_SIZE} />
+                    )}
+                  </View>
+                  {/* Label inside tile at bottom */}
+                  <Text style={styles.tileLabel} numberOfLines={1}>
+                    {item.label}
+                  </Text>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
         </View>
 
         {/* ── Quote of the Day ── */}

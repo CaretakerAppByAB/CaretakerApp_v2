@@ -7,7 +7,7 @@
 
 import React, {useState, useEffect, useRef, useMemo} from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView,
+  View, Text, TextInput, TouchableOpacity, ScrollView, Image,
   StyleSheet, KeyboardAvoidingView,
   Platform, ActivityIndicator, Alert,
 } from 'react-native';
@@ -24,6 +24,7 @@ import AttachmentSheet from '../components/AttachmentSheet';
 import Avatar from '../components/Avatar';
 import {Colors} from '../theme/colors';
 import {detectPHI, redactPHI} from '../services/phiDetection';
+import {uploadImage} from '../services/mediaService';
 import {
   subscribeToMessages, sendMessage, markConversationRead, Message,
 } from '../services/messagingService';
@@ -82,7 +83,7 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
   const {user} = useAuth();
   const {
     conversationId = '', name = 'Chat',
-    receiverId = '', online = false,
+    receiverId = '', online = false, photoURL,
   } = route?.params ?? {};
 
   const [messages,     setMessages]     = useState<Message[]>([]);
@@ -175,13 +176,15 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
     }
   };
 
-  // Sends immediately from the attachment sheet (activity invites, emoji picks)
-  const handleSendAttachmentText = async (text: string) => {
+  // Uploads a picked/captured photo, then sends it as an image message
+  const handleSendImage = async (uri: string) => {
     if (!user) return;
     try {
-      await sendMessage(conversationId, user.uid, user.name, receiverId, text);
-    } catch {
-      Alert.alert('Error', 'Could not send. Check your connection.');
+      const url = await uploadImage({uri, fileName: `chat_${Date.now()}.jpg`, type: 'image/jpeg'}, 'chatImages');
+      await sendMessage(conversationId, user.uid, user.name, receiverId, '', 'image', url);
+    } catch (err: any) {
+      console.error('[ChatScreen] send image failed:', err);
+      Alert.alert('Could not send the photo', err?.message ?? 'Check your connection and try again.');
     }
   };
 
@@ -211,7 +214,7 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
       <AttachmentSheet
         visible={showAttach}
         onClose={() => setShowAttach(false)}
-        onSendText={handleSendAttachmentText}
+        onSendImage={handleSendImage}
         onThankYouNote={handleThankYouNote}
       />
 
@@ -220,7 +223,7 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
         onBack={() => navigation.goBack()}
         titleSlot={
           <View style={s.headerTitleSlot}>
-            <Avatar name={name} size={36}/>
+            <Avatar name={name} size={36} photoURL={photoURL}/>
             <View style={s.headerTitleText}>
               <Text style={s.headerName} numberOfLines={1}>{name}</Text>
               <View style={s.statusRow}>
@@ -260,6 +263,26 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
             const isMine = msg.senderId === user?.uid;
             if (msg.messageType === 'thankYouNote') {
               return <ThankYouNoteBubble key={msg.id} msg={msg} isMine={isMine}/>;
+            }
+            if (msg.messageType === 'image') {
+              return (
+                <View key={msg.id} style={[s.bubbleWrap, isMine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
+                  {!!msg.imageUrl && (
+                    <Image source={{uri: msg.imageUrl}} style={s.imageBubble} resizeMode="cover"/>
+                  )}
+                  {!!msg.text && (
+                    <View style={[s.bubble, isMine ? s.bubbleMine : s.bubbleTheirs, {marginTop: 4}]}>
+                      <Text style={[s.bubbleText, isMine ? s.bubbleTextMine : s.bubbleTextTheirs]}>
+                        {msg.text}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={[s.meta, isMine && s.metaMine]}>
+                    <Text style={s.metaTime}>{formatTime(msg.createdAt)}</Text>
+                    {isMine && <Text style={s.checks}>✓✓</Text>}
+                  </View>
+                </View>
+              );
             }
             return (
               <View key={msg.id} style={[s.bubbleWrap, isMine ? s.bubbleWrapMine : s.bubbleWrapTheirs]}>
@@ -359,6 +382,7 @@ const s = StyleSheet.create({
   bubbleText:       {fontSize:14, lineHeight:20},
   bubbleTextMine:   {color: Colors.white},
   bubbleTextTheirs: {color: Colors.text},
+  imageBubble:      {width: 200, height: 200, borderRadius: 16, backgroundColor: '#E8E8E8'},
 
   thankYouCard:    {backgroundColor:'#000', borderRadius:18, borderTopRightRadius:4, padding:20, alignItems:'center', width:190},
   thankYouLabel:   {color: Colors.white, fontSize:14, fontWeight:'700', marginTop:10},

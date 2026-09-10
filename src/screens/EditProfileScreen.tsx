@@ -10,10 +10,12 @@ import {
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
 import {
-  updateUserProfile, refreshUser,
+  updateUserProfile,
   PRONOUN_OPTIONS, GOAL_OPTIONS, RESPONSIBILITY_OPTIONS,
 } from '../services/userService';
+import {pickImageWithPrompt, uploadImage} from '../services/mediaService';
 import ScreenHeader from '../components/ScreenHeader';
+import Avatar from '../components/Avatar';
 import {Colors} from '../theme/colors';
 
 const Chip: React.FC<{label: string; selected: boolean; onPress: () => void}> = ({label, selected, onPress}) => (
@@ -30,6 +32,8 @@ const EditProfileScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const [age,              setAge]      = useState(user?.age ?? '');
   const [goals,            setGoals]    = useState<string[]>(user?.goals ?? []);
   const [responsibilities, setResps]    = useState<string[]>(user?.responsibilities ?? []);
+  const [photoURL,         setPhotoURL] = useState(user?.profilePhotoURL ?? '');
+  const [uploadingPhoto,   setUploadingPhoto] = useState(false);
   const [saving,           setSaving]   = useState(false);
 
   const toggleGoal = (g: string) =>
@@ -37,12 +41,29 @@ const EditProfileScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const toggleResp = (r: string) =>
     setResps(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r]);
 
+  const handleChangePhoto = async () => {
+    if (!user) return;
+    try {
+      const image = await pickImageWithPrompt();
+      if (!image) return;
+      setUploadingPhoto(true);
+      const url = await uploadImage(image, `profilePhotos/${user.uid}`);
+      setPhotoURL(url);
+    } catch (err: any) {
+      Alert.alert('Could not upload photo', err?.message ?? 'Check your connection and try again.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) { Alert.alert('Name required', 'Please enter your display name.'); return; }
     if (!user) return;
     setSaving(true);
     try {
-      await updateUserProfile(user.uid, {name: name.trim(), pronouns, age, goals, responsibilities});
+      await updateUserProfile(user.uid, {
+        name: name.trim(), pronouns, age, goals, responsibilities, profilePhotoURL: photoURL,
+      });
       await refresh();
       navigation.goBack();
     } catch (err: any) {
@@ -56,6 +77,20 @@ const EditProfileScreen: React.FC<{navigation: any}> = ({navigation}) => {
     <View style={ep.safe}>
       <ScreenHeader title="Edit Profile" onBack={() => navigation.goBack()}/>
       <ScrollView style={ep.scroll} contentContainerStyle={ep.container} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+
+        <View style={ep.photoRow}>
+          <TouchableOpacity onPress={handleChangePhoto} activeOpacity={0.8} disabled={uploadingPhoto}>
+            <Avatar name={name || 'U'} size={88} photoURL={photoURL}/>
+            {uploadingPhoto && (
+              <View style={ep.photoOverlay}>
+                <ActivityIndicator color={Colors.white}/>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={handleChangePhoto} disabled={uploadingPhoto}>
+            <Text style={ep.changePhotoText}>Change Photo</Text>
+          </TouchableOpacity>
+        </View>
 
         <Text style={ep.sectionTitle}>Display Name</Text>
         <TextInput
@@ -101,9 +136,9 @@ const EditProfileScreen: React.FC<{navigation: any}> = ({navigation}) => {
         </View>
 
         <TouchableOpacity
-          style={[ep.saveBtn, saving && ep.btnDisabled]}
+          style={[ep.saveBtn, (saving || uploadingPhoto) && ep.btnDisabled]}
           onPress={handleSave}
-          disabled={saving}
+          disabled={saving || uploadingPhoto}
           activeOpacity={0.85}>
           {saving
             ? <ActivityIndicator color={Colors.white}/>
@@ -121,6 +156,16 @@ const ep = StyleSheet.create({
   safe:      {flex: 1, backgroundColor: Colors.backgroundLight},
   scroll:    {flex: 1},
   container: {padding: 20},
+
+  photoRow: {alignItems: 'center', marginBottom: 24},
+  photoOverlay: {
+    ...StyleSheet.absoluteFill,
+    borderRadius: 44,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  changePhotoText: {fontSize: 14, fontWeight: '700', color: Colors.primary, marginTop: 10},
 
   sectionTitle: {fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 10, marginTop: 4},
   textInput: {

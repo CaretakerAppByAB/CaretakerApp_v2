@@ -1,18 +1,15 @@
 /**
  * AttachmentSheet.tsx — "Add to Message" bottom sheet for the chat composer.
- *
- * Photo / Take Photo / Voice Note need a native module (image picker, camera,
- * audio recorder) that isn't installed in this project yet, so they surface a
- * "coming soon" alert for now. Activity Invite and Emoji are implemented for
- * real since they only need the existing text-message pipeline. Thank You Note
- * hands off to the existing gratitude-note composer.
+ * Exactly three options: Photo, Take Photo (both send an image via
+ * onSendImage), and Thank You Note (hands off to the gratitude-note composer).
  */
 
 import React, {useState} from 'react';
-import {Modal, View, Text, TouchableOpacity, TextInput, StyleSheet, Alert, Pressable} from 'react-native';
+import {Modal, View, Text, TouchableOpacity, StyleSheet, Alert, Pressable, ActivityIndicator} from 'react-native';
 import Svg, {Path, Circle, Rect} from 'react-native-svg';
-import {CalendarIcon, EnvelopeOpenIcon} from './icons/TabIcons';
+import {EnvelopeOpenIcon} from './icons/TabIcons';
 import {Colors} from '../theme/colors';
+import {pickImageFromLibrary, pickImageFromCamera} from '../services/mediaService';
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -37,137 +34,64 @@ const CameraIcon = () => (
   </Svg>
 );
 
-const MicIcon = () => (
-  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-    <Rect x={9} y={2} width={6} height={12} rx={3} stroke={Colors.text} strokeWidth={1.8}/>
-    <Path d="M5 11a7 7 0 0014 0M12 18v3" stroke={Colors.text} strokeWidth={1.8} strokeLinecap="round"/>
-  </Svg>
-);
-
-const SmileyIcon = () => (
-  <Svg width={24} height={24} viewBox="0 0 24 24" fill="none">
-    <Circle cx={12} cy={12} r={9} stroke={Colors.text} strokeWidth={1.8}/>
-    <Circle cx={9} cy={10} r={1} fill={Colors.text}/>
-    <Circle cx={15} cy={10} r={1} fill={Colors.text}/>
-    <Path d="M8 14.5s1.5 2 4 2 4-2 4-2" stroke={Colors.text} strokeWidth={1.8} strokeLinecap="round"/>
-  </Svg>
-);
-
-const BackIcon = () => (
-  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
-    <Path d="M15 18l-6-6 6-6" stroke={Colors.text} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round"/>
-  </Svg>
-);
-
-const EMOJIS = ['😀','😂','🥰','😊','😍','🤗','👍','🙏','❤️','🎉','😢','😴'];
-
 // ── Component ──────────────────────────────────────────────────────────────────
-
-type Panel = 'grid' | 'activity' | 'emoji';
 
 interface AttachmentSheetProps {
   visible: boolean;
   onClose: () => void;
-  onSendText: (text: string) => void;
+  onSendImage: (uri: string) => void;
   onThankYouNote: () => void;
 }
 
-const comingSoon = (feature: string) =>
-  Alert.alert('Coming soon', `${feature} will be available in a future update.`);
+const AttachmentSheet: React.FC<AttachmentSheetProps> = ({visible, onClose, onSendImage, onThankYouNote}) => {
+  const [picking, setPicking] = useState<'Photo' | 'Take Photo' | null>(null);
 
-const AttachmentSheet: React.FC<AttachmentSheetProps> = ({visible, onClose, onSendText, onThankYouNote}) => {
-  const [panel, setPanel] = useState<Panel>('grid');
-  const [activityText, setActivityText] = useState('');
-
-  const close = () => {
-    setPanel('grid');
-    setActivityText('');
-    onClose();
-  };
-
-  const handleSendActivity = () => {
-    if (!activityText.trim()) return;
-    onSendText(`📅 Activity Invite: ${activityText.trim()}`);
-    close();
-  };
-
-  const handlePickEmoji = (emoji: string) => {
-    onSendText(emoji);
-    close();
+  const handlePickPhoto = (label: 'Photo' | 'Take Photo', pick: () => Promise<{uri: string} | null>) => async () => {
+    setPicking(label);
+    try {
+      const image = await pick();
+      if (image) {
+        onClose();
+        onSendImage(image.uri);
+      }
+    } catch (err: any) {
+      Alert.alert('Error', err?.message ?? 'Could not open the photo picker.');
+    } finally {
+      setPicking(null);
+    }
   };
 
   const OPTIONS = [
-    {label: 'Photo',          Icon: ImageIcon,  onPress: () => comingSoon('Photo attachments')},
-    {label: 'Take Photo',     Icon: CameraIcon, onPress: () => comingSoon('Camera attachments')},
-    {label: 'Voice Note',     Icon: MicIcon,    onPress: () => comingSoon('Voice notes')},
-    {label: 'Activity Invite',Icon: CalendarIcon, onPress: () => setPanel('activity')},
-    {label: 'Emoji',          Icon: SmileyIcon, onPress: () => setPanel('emoji')},
-    {label: 'Thank You Note', Icon: EnvelopeOpenIcon, onPress: () => { close(); onThankYouNote(); }},
+    {label: 'Photo' as const,          Icon: ImageIcon,        onPress: handlePickPhoto('Photo', pickImageFromLibrary)},
+    {label: 'Take Photo' as const,      Icon: CameraIcon,       onPress: handlePickPhoto('Take Photo', pickImageFromCamera)},
+    {label: 'Thank You Note',          Icon: EnvelopeOpenIcon, onPress: () => { onClose(); onThankYouNote(); }},
   ];
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={close}>
-      <Pressable style={s.backdrop} onPress={close}/>
+    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
+      <Pressable style={s.backdrop} onPress={onClose}/>
       <View style={s.sheet}>
         <View style={s.handle}/>
 
         <View style={s.headerRow}>
-          {panel === 'grid' ? (
-            <View style={s.headerSide}/>
-          ) : (
-            <TouchableOpacity style={s.headerSide} onPress={() => setPanel('grid')} hitSlop={8}>
-              <BackIcon/>
-            </TouchableOpacity>
-          )}
-          <Text style={s.title}>
-            {panel === 'grid' ? 'Add to Message' : panel === 'activity' ? 'Activity Invite' : 'Choose an Emoji'}
-          </Text>
-          <TouchableOpacity style={s.headerSide} onPress={close} hitSlop={8}>
+          <View style={s.headerSide}/>
+          <Text style={s.title}>Add to Message</Text>
+          <TouchableOpacity style={s.headerSide} onPress={onClose} hitSlop={8}>
             <CloseIcon/>
           </TouchableOpacity>
         </View>
 
-        {panel === 'grid' && (
-          <View style={s.grid}>
-            {OPTIONS.map(({label, Icon, onPress}) => (
-              <TouchableOpacity key={label} style={s.tile} onPress={onPress} activeOpacity={0.75}>
-                <Icon color={Colors.text} size={24}/>
-                <Text style={s.tileLabel}>{label}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-
-        {panel === 'activity' && (
-          <View style={s.activityPanel}>
-            <TextInput
-              style={s.activityInput}
-              placeholder="e.g. Walk in the park at 3pm?"
-              placeholderTextColor="#9E9E9E"
-              value={activityText}
-              onChangeText={setActivityText}
-              autoFocus
-              multiline
-            />
-            <TouchableOpacity
-              style={[s.sendBtn, !activityText.trim() && s.sendBtnDisabled]}
-              onPress={handleSendActivity}
-              disabled={!activityText.trim()}
-              activeOpacity={0.85}>
-              <Text style={s.sendBtnText}>Send Invite</Text>
+        <View style={s.grid}>
+          {OPTIONS.map(({label, Icon, onPress}) => (
+            <TouchableOpacity key={label} style={s.tile} onPress={onPress} activeOpacity={0.75} disabled={!!picking}>
+              {picking === label
+                ? <ActivityIndicator color={Colors.text}/>
+                : <Icon color={Colors.text} size={24}/>
+              }
+              <Text style={s.tileLabel}>{label}</Text>
             </TouchableOpacity>
-          </View>
-        )}
-
-        {panel === 'emoji' && (
-          <View style={s.emojiGrid}>
-            {EMOJIS.map(e => (
-              <TouchableOpacity key={e} style={s.emojiTile} onPress={() => handlePickEmoji(e)} activeOpacity={0.7}>
-                <Text style={s.emojiText}>{e}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
+          ))}
+        </View>
       </View>
     </Modal>
   );
@@ -201,28 +125,6 @@ const s = StyleSheet.create({
     gap: 8,
   },
   tileLabel: {fontSize: 11, fontWeight: '600', color: Colors.text, textAlign: 'center'},
-
-  activityPanel: {gap: 14},
-  activityInput: {
-    backgroundColor: Colors.primaryLight,
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 14,
-    color: Colors.text,
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  sendBtn: {backgroundColor: Colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center'},
-  sendBtnDisabled: {opacity: 0.5},
-  sendBtnText: {color: Colors.white, fontSize: 15, fontWeight: '700'},
-
-  emojiGrid: {flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center'},
-  emojiTile: {
-    width: 56, height: 56, borderRadius: 12,
-    backgroundColor: Colors.primaryLight,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  emojiText: {fontSize: 26},
 });
 
 export default AttachmentSheet;

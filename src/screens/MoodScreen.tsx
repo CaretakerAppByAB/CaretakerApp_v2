@@ -13,10 +13,14 @@ import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import {
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   StyleSheet,
   ScrollView,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
   Dimensions,
 } from 'react-native';
 import {useAuth} from '../context/AuthContext';
@@ -24,6 +28,7 @@ import ScreenHeader from '../components/ScreenHeader';
 import MoodFace from '../components/MoodFace';
 import {Colors} from '../theme/colors';
 import {DAILY_QUOTES} from '../constants/quotes';
+import {createEntry} from '../services/journalService';
 import {
   MoodType,
   MOOD_OPTIONS,
@@ -89,6 +94,62 @@ const MoodCheckInModal: React.FC<{
   </Modal>
 );
 
+// ── Mood reflection modal ─────────────────────────────────────────────────────
+// Shown right after the first mood check-in of the day — captures a short
+// blurb on *why* the user feels that way and saves it as a free-write entry.
+
+const MoodReflectionModal: React.FC<{
+  visible: boolean;
+  mood: MoodType | null;
+  onSave: (text: string) => Promise<void>;
+}> = ({visible, mood, onSave}) => {
+  const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const label = mood ? MOOD_OPTIONS.find(o => o.type === mood)?.label.toLowerCase() : '';
+
+  const handleSave = async () => {
+    if (!text.trim()) {
+      Alert.alert('Tell us a bit more', 'Write a sentence or two about why you feel this way.');
+      return;
+    }
+    setSaving(true);
+    await onSave(text.trim());
+    setSaving(false);
+    setText('');
+  };
+
+  return (
+    <Modal visible={visible} transparent animationType="fade">
+      <KeyboardAvoidingView
+        style={rs.overlay}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <View style={rs.card}>
+          <Text style={rs.title}>Why do you feel {label}?</Text>
+          <TextInput
+            style={rs.input}
+            multiline
+            textAlignVertical="top"
+            placeholder="I feel this way because..."
+            placeholderTextColor={Colors.textSecondary}
+            value={text}
+            onChangeText={setText}
+            maxLength={500}
+            editable={!saving}
+          />
+          <TouchableOpacity
+            style={[rs.saveBtn, (!text.trim() || saving) && rs.saveBtnDisabled]}
+            activeOpacity={0.8}
+            onPress={handleSave}
+            disabled={saving}>
+            <Text style={rs.saveBtnText}>{saving ? 'Saving...' : 'Save'}</Text>
+          </TouchableOpacity>
+        </View>
+      </KeyboardAvoidingView>
+    </Modal>
+  );
+};
+
 // ── Main screen ────────────────────────────────────────────────────────────────
 
 const MoodScreen: React.FC<{navigation: any}> = ({navigation}) => {
@@ -100,6 +161,8 @@ const MoodScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const [month,     setMonth]     = useState(now.getMonth());
   const [moods,     setMoods]     = useState<Record<number, MoodType>>({});
   const [showModal, setShowModal] = useState(false);
+  const [showReflection, setShowReflection] = useState(false);
+  const [pendingMood, setPendingMood] = useState<MoodType | null>(null);
   const tips = useMemo(() => pickRandomTips(3), []);
 
   const refreshMoods = useCallback(async () => {
@@ -115,6 +178,14 @@ const MoodScreen: React.FC<{navigation: any}> = ({navigation}) => {
     await saveMood(uid, new Date(), mood);
     setShowModal(false);
     refreshMoods();
+    setPendingMood(mood);
+    setShowReflection(true);
+  };
+
+  const handleSaveReflection = async (text: string) => {
+    await createEntry(uid, 'freeWrite', '', text).catch(() => {});
+    setShowReflection(false);
+    setPendingMood(null);
   };
 
   const changeMonth = (delta: number) => {
@@ -147,6 +218,11 @@ const MoodScreen: React.FC<{navigation: any}> = ({navigation}) => {
   return (
     <>
       <MoodCheckInModal visible={showModal} onSelect={handleSelect}/>
+      <MoodReflectionModal
+        visible={showReflection}
+        mood={pendingMood}
+        onSave={handleSaveReflection}
+      />
 
       <View style={s.safeArea}>
         <ScreenHeader title="Mood Calendar" onBack={() => navigation.navigate('Home')}/>
@@ -381,6 +457,60 @@ const ms = StyleSheet.create({
     fontWeight: '700',
     color: Colors.text,
     textAlign: 'center',
+  },
+});
+
+// Reflection modal styles
+const rs = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(139,126,238,0.88)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  card: {
+    backgroundColor: Colors.white,
+    borderRadius: 20,
+    padding: 20,
+    width: '100%',
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.text,
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  input: {
+    minHeight: 110,
+    backgroundColor: Colors.backgroundLight,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 14,
+    color: Colors.text,
+    marginBottom: 16,
+  },
+  saveBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 24,
+    paddingVertical: 13,
+    alignItems: 'center',
+  },
+  saveBtnDisabled: {
+    opacity: 0.5,
+  },
+  saveBtnText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.white,
   },
 });
 

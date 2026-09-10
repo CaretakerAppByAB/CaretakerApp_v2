@@ -55,6 +55,7 @@ interface Conversation {
   closeFriend: boolean;
   isSupport?:  boolean;
   receiverId:  string; // needed to send messages in ChatScreen
+  photoURL?:   string;
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -89,6 +90,7 @@ const mapConversation = (c: ConversationSummary): Conversation => ({
   closeFriend: false,  // not tracked in Firebase yet
   isSupport:   false,
   receiverId:  c.otherUser.uid,
+  photoURL:    c.otherUser.photoURL,
 });
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
@@ -124,6 +126,18 @@ const HeartFilled = () => (
   </Svg>
 );
 
+const BackChevron = () => (
+  <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M15 18l-6-6 6-6"
+      stroke={Colors.primary}
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
 // Pencil / compose icon — added to the header
 const ComposeIcon = () => (
   <Svg width={20} height={20} viewBox="0 0 24 24" fill="none">
@@ -144,7 +158,7 @@ const ConvAvatar: React.FC<{conv: Conversation}> = ({conv}) => (
         <GroupIcon />
       </View>
     ) : (
-      <Avatar name={conv.name} size={AVATAR_SIZE}/>
+      <Avatar name={conv.name} size={AVATAR_SIZE} photoURL={conv.photoURL}/>
     )}
     {conv.online && <View style={s.onlineDot}/>}
   </View>
@@ -375,6 +389,7 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
       initials:       conv.initials,
       receiverId:     conv.receiverId,
       online:         conv.online,
+      photoURL:       conv.photoURL,
     });
   };
 
@@ -399,9 +414,18 @@ const PrivateMessagesScreen: React.FC<{navigation: any}> = ({navigation}) => {
 
         {/* ── Header ── */}
         <View style={[s.titleRow, {marginTop: insets.top + 12}]}>
-          <View>
-            <Text style={s.pageTitle}>Messages</Text>
-            <Text style={s.pageSubtitle}>Stay connected</Text>
+          <View style={s.titleLeft}>
+            <TouchableOpacity
+              style={s.backBtn}
+              onPress={() => navigation.navigate('Home')}
+              activeOpacity={0.7}
+              hitSlop={{top: 8, bottom: 8, left: 8, right: 8}}>
+              <BackChevron/>
+            </TouchableOpacity>
+            <View>
+              <Text style={s.pageTitle}>Messages</Text>
+              <Text style={s.pageSubtitle}>Stay connected</Text>
+            </View>
           </View>
           <TouchableOpacity
             style={s.composeBtn}
@@ -518,6 +542,15 @@ const s = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     marginBottom: 18,
+  },
+  titleLeft:    {flexDirection: 'row', alignItems: 'center', gap: 12},
+  backBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   pageTitle:    {fontSize: 30, fontWeight: '700', color: Colors.text},
   pageSubtitle: {fontSize: 15, fontWeight: '400', color: Colors.textSecondary, marginTop: 2},

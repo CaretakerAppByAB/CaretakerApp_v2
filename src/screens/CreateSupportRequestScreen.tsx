@@ -6,7 +6,7 @@
 
 import React, {useState, useMemo} from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, Switch,
+  View, Text, TextInput, TouchableOpacity, ScrollView, Image,
   StyleSheet, ActivityIndicator, Alert, KeyboardAvoidingView, Platform,
 } from 'react-native';
 import ScreenHeader from '../components/ScreenHeader';
@@ -14,20 +14,14 @@ import PHIWarningBanner from '../components/PHIWarningBanner';
 import {Colors} from '../theme/colors';
 import {detectPHI, redactPHI} from '../services/phiDetection';
 import {useAuth} from '../context/AuthContext';
+import {pickImageWithPrompt, uploadImage, PickedImage} from '../services/mediaService';
 import {
   createSupportRequest,
   updateSupportRequest,
-  RequestScope,
   SupportRequest,
 } from '../services/supportService';
 
 const CATEGORIES = ['Emotional Distress', 'Finances', 'Work Issues', 'Personal Health', 'Other'];
-
-const SCOPE_OPTIONS: {value: RequestScope; label: string}[] = [
-  {value: 'circle', label: 'My Circle only (Default)'},
-  {value: 'local',  label: 'My local community'},
-  {value: 'public', label: 'Public AlzApp community'},
-];
 
 interface RouteParams {
   editRequest?: SupportRequest;
@@ -41,22 +35,24 @@ const CreateSupportRequestScreen: React.FC<{navigation: any; route: any}> = ({na
   const [title,       setTitle]       = useState(editRequest?.title ?? '');
   const [categories,  setCategories]  = useState<string[]>(editRequest?.categories ?? []);
   const [description, setDescription] = useState(editRequest?.description ?? '');
-  const [scope,        setScope]       = useState<RequestScope>(editRequest?.scope ?? 'circle');
-  const [anonymous,    setAnonymous]   = useState(editRequest?.anonymous ?? false);
+  const [image,        setImage]       = useState<PickedImage | null>(null);
   const [submitting,   setSubmitting]  = useState(false);
   const [phiDismissed, setPhiDismissed] = useState(false);
 
-  // Circle-only requests are private to the caregiver's trusted circle, so PHI
-  // is advisory there — anything shared more broadly is treated as public and
-  // the check becomes blocking, matching the Community forum's rules.
-  const isPublicish = scope !== 'circle';
+  const handlePickImage = async () => {
+    const picked = await pickImageWithPrompt();
+    if (picked) setImage(picked);
+  };
+
+  // Every request is posted anonymously to the public Help/Advice community
+  // tab, so PHI is always blocking here — matching the Community forum's rules.
   const combinedText = `${title} ${description}`;
 
   const phiMatches = useMemo(
     () => (phiDismissed || combinedText.trim().length < 4 ? [] : detectPHI(combinedText)),
     [combinedText, phiDismissed],
   );
-  const hasBlockingPHI = isPublicish && phiMatches.length > 0;
+  const hasBlockingPHI = phiMatches.length > 0;
 
   const toggleCategory = (cat: string) => {
     setCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
@@ -73,24 +69,26 @@ const CreateSupportRequestScreen: React.FC<{navigation: any; route: any}> = ({na
   const handleSubmit = async () => {
     if (!canSubmit || !user || submitting) return;
     setSubmitting(true);
-    const input = {title: title.trim(), categories, description: description.trim(), scope, anonymous};
+    const input = {title: title.trim(), categories, description: description.trim()};
     try {
+      const imageUrl = image ? await uploadImage(image, 'postImages') : undefined;
       if (isEditing) {
-        await updateSupportRequest(editRequest!.id, input);
+        await updateSupportRequest(editRequest!.id, editRequest!.postId, input, imageUrl);
         navigation.navigate('RequestConfirmation', {
           request: {...editRequest, ...input},
         });
       } else {
-        const id = await createSupportRequest(user.uid, user.name, input);
+        const {id, postId} = await createSupportRequest(user.uid, user.name, input, imageUrl);
         navigation.navigate('RequestConfirmation', {
           request: {
-            id, authorId: user.uid, authorName: user.name,
+            id, postId, authorId: user.uid, authorName: user.name,
             expandedReach: false, status: 'open', createdAt: Date.now(), ...input,
           },
         });
       }
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Could not send your request. Check your connection.');
+      console.error('[CreateSupportRequestScreen] submit failed:', err);
+      Alert.alert('Could not send your request', err?.message ?? 'Check your connection and try again.');
     } finally {
       setSubmitting(false);
     }
@@ -150,38 +148,27 @@ const CreateSupportRequestScreen: React.FC<{navigation: any; route: any}> = ({na
             <PHIWarningBanner
               matches={phiMatches}
               onRedact={handleRedact}
-              onDismiss={isPublicish ? undefined : () => setPhiDismissed(true)}
-              variant={isPublicish ? 'block' : 'warn'}
+              variant="block"
             />
           )}
 
-          <Text style={s.sectionLabel}>Post in:</Text>
-          <View style={s.scopeGroup}>
-            {SCOPE_OPTIONS.map(opt => {
-              const selected = scope === opt.value;
-              return (
-                <TouchableOpacity
-                  key={opt.value}
-                  style={[s.scopeRow, selected && s.scopeRowActive]}
-                  onPress={() => setScope(opt.value)}
-                  activeOpacity={0.75}>
-                  <View style={[s.radioOuter, selected && s.radioOuterActive]}>
-                    {selected && <View style={s.radioInner}/>}
-                  </View>
-                  <Text style={[s.scopeLabel, selected && s.scopeLabelActive]}>{opt.label}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </View>
+          {image ? (
+            <View style={s.imagePreviewWrap}>
+              <Image source={{uri: image.uri}} style={s.imagePreview} resizeMode="cover"/>
+              <TouchableOpacity style={s.removeImageBtn} onPress={() => setImage(null)} activeOpacity={0.8}>
+                <Text style={s.removeImageBtnText}>✕</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <TouchableOpacity style={s.photoBtn} onPress={handlePickImage} activeOpacity={0.75}>
+              <Text style={s.photoBtnText}>📷 Add Photo</Text>
+            </TouchableOpacity>
+          )}
 
-          <View style={s.anonRow}>
-            <Text style={s.anonLabel}>Post anonymously</Text>
-            <Switch
-              value={anonymous}
-              onValueChange={setAnonymous}
-              trackColor={{false: '#E0E0E0', true: Colors.primaryMedium}}
-              thumbColor={Colors.white}
-            />
+          <View style={s.anonNotice}>
+            <Text style={s.anonNoticeText}>
+              🌐 Posted anonymously to the community Help/Advice board, so anyone on AlzApp can offer advice.
+            </Text>
           </View>
 
           <TouchableOpacity
@@ -238,30 +225,25 @@ const s = StyleSheet.create({
     marginBottom: 16,
   },
 
-  sectionLabel: {fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 10},
-  scopeGroup: {gap: 8, marginBottom: 20},
-  scopeRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    borderWidth: 1, borderColor: '#DDDDDD', borderRadius: 10,
-    paddingHorizontal: 14, paddingVertical: 13,
+  photoBtn: {
+    backgroundColor: Colors.primaryLight, borderRadius: 12,
+    paddingVertical: 12, alignItems: 'center', marginBottom: 16,
   },
-  scopeRowActive: {backgroundColor: Colors.primaryLight, borderColor: Colors.primary},
-  radioOuter: {
-    width: 18, height: 18, borderRadius: 9,
-    borderWidth: 1.5, borderColor: '#BBBBBB',
-    alignItems: 'center', justifyContent: 'center',
+  photoBtnText: {fontSize: 13, fontWeight: '600', color: Colors.text},
+  imagePreviewWrap: {marginBottom: 16, position: 'relative'},
+  imagePreview: {width: '100%', height: 180, borderRadius: 12, backgroundColor: '#E8E8E8'},
+  removeImageBtn: {
+    position: 'absolute', top: 8, right: 8,
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center',
   },
-  radioOuterActive: {borderColor: Colors.primary},
-  radioInner: {width: 9, height: 9, borderRadius: 4.5, backgroundColor: Colors.primary},
-  scopeLabel: {fontSize: 14, fontWeight: '500', color: Colors.text},
-  scopeLabelActive: {color: Colors.primary, fontWeight: '700'},
+  removeImageBtnText: {color: Colors.white, fontSize: 13, fontWeight: '700'},
 
-  anonRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: Colors.primaryLight, borderRadius: 10,
-    paddingHorizontal: 16, paddingVertical: 14, marginBottom: 24,
+  anonNotice: {
+    backgroundColor: '#EEF4FD', borderRadius: 10,
+    paddingHorizontal: 12, paddingVertical: 9, marginBottom: 24,
   },
-  anonLabel: {fontSize: 14, fontWeight: '600', color: Colors.text},
+  anonNoticeText: {fontSize: 12, color: '#2C5A8F', lineHeight: 17},
 
   submitBtn: {
     backgroundColor: Colors.primary, borderRadius: 20,

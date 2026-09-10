@@ -6,15 +6,10 @@
 import React, {useState, useEffect} from 'react';
 import {View, Text, TouchableOpacity, ScrollView, StyleSheet, ActivityIndicator, Alert} from 'react-native';
 import ScreenHeader from '../components/ScreenHeader';
+import CommentsModal from '../components/CommentsModal';
 import {Colors} from '../theme/colors';
 import {useAuth} from '../context/AuthContext';
 import {subscribeToMyRequests, resolveSupportRequest, SupportRequest} from '../services/supportService';
-
-const SCOPE_LABEL: Record<SupportRequest['scope'], string> = {
-  circle: 'My Circle',
-  local:  'Local Community',
-  public: 'Public',
-};
 
 const timeAgo = (ms: number): string => {
   const diff = Date.now() - ms;
@@ -27,7 +22,11 @@ const timeAgo = (ms: number): string => {
   return 'just now';
 };
 
-const RequestCard: React.FC<{request: SupportRequest; onResolve: () => void}> = ({request, onResolve}) => {
+const RequestCard: React.FC<{
+  request: SupportRequest;
+  onResolve: () => void;
+  onViewAdvice: () => void;
+}> = ({request, onResolve, onViewAdvice}) => {
   const resolved = request.status === 'resolved';
   return (
     <View style={s.card}>
@@ -53,12 +52,17 @@ const RequestCard: React.FC<{request: SupportRequest; onResolve: () => void}> = 
       </View>
 
       <View style={s.cardFooter}>
-        <Text style={s.metaText}>{SCOPE_LABEL[request.scope]} · {timeAgo(request.createdAt)}</Text>
-        {!resolved && (
-          <TouchableOpacity style={s.resolveBtn} onPress={onResolve} activeOpacity={0.8}>
-            <Text style={s.resolveBtnText}>Mark as Resolved</Text>
+        <Text style={s.metaText}>{timeAgo(request.createdAt)}</Text>
+        <View style={s.cardActions}>
+          <TouchableOpacity style={s.adviceBtn} onPress={onViewAdvice} activeOpacity={0.8}>
+            <Text style={s.adviceBtnText}>View Advice</Text>
           </TouchableOpacity>
-        )}
+          {!resolved && (
+            <TouchableOpacity style={s.resolveBtn} onPress={onResolve} activeOpacity={0.8}>
+              <Text style={s.resolveBtnText}>Mark as Resolved</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
     </View>
   );
@@ -66,9 +70,11 @@ const RequestCard: React.FC<{request: SupportRequest; onResolve: () => void}> = 
 
 const SubmittedRequestsScreen: React.FC<{navigation: any}> = ({navigation}) => {
   const {user} = useAuth();
+  const authorName = user?.name ?? user?.email?.split('@')[0] ?? 'Anonymous';
   const [requests, setRequests] = useState<SupportRequest[]>([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState<string | null>(null);
+  const [commentsPostId, setCommentsPostId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -91,7 +97,7 @@ const SubmittedRequestsScreen: React.FC<{navigation: any}> = ({navigation}) => {
           text: 'Resolve',
           onPress: async () => {
             try {
-              await resolveSupportRequest(request.id);
+              await resolveSupportRequest(request.id, request.postId);
             } catch {
               Alert.alert('Error', 'Could not update this request. Check your connection.');
             }
@@ -116,11 +122,24 @@ const SubmittedRequestsScreen: React.FC<{navigation: any}> = ({navigation}) => {
       ) : (
         <ScrollView contentContainerStyle={s.container} showsVerticalScrollIndicator={false}>
           {requests.map(r => (
-            <RequestCard key={r.id} request={r} onResolve={() => handleResolve(r)}/>
+            <RequestCard
+              key={r.id}
+              request={r}
+              onResolve={() => handleResolve(r)}
+              onViewAdvice={() => setCommentsPostId(r.postId)}
+            />
           ))}
           <View style={{height: 24}}/>
         </ScrollView>
       )}
+
+      <CommentsModal
+        visible={!!commentsPostId}
+        postId={commentsPostId}
+        authorName={authorName}
+        authorPhotoURL={user?.profilePhotoURL}
+        onClose={() => setCommentsPostId(null)}
+      />
     </View>
   );
 };
@@ -154,6 +173,9 @@ const s = StyleSheet.create({
 
   cardFooter: {flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between'},
   metaText: {fontSize: 11, color: Colors.textSecondary},
+  cardActions: {flexDirection: 'row', alignItems: 'center', gap: 8},
+  adviceBtn: {backgroundColor: Colors.white, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6},
+  adviceBtnText: {fontSize: 11, fontWeight: '700', color: Colors.primary},
   resolveBtn: {backgroundColor: Colors.primary, borderRadius: 14, paddingHorizontal: 12, paddingVertical: 6},
   resolveBtnText: {fontSize: 11, fontWeight: '700', color: Colors.white},
 });

@@ -117,9 +117,12 @@ const ProfileScreen: React.FC<{navigation: any}> = ({navigation}) => {
         {/* ── Avatar (overlapping the banner) ── */}
         <View style={ps.avatarWrap}>
           <View style={ps.avatarCircle}>
-            {!user?.profilePhotoURL && (
-              <Avatar name={user?.name ?? 'U'} size={AVATAR_SIZE - 8} variant="onLight"/>
-            )}
+            <Avatar
+              name={user?.name ?? 'U'}
+              size={AVATAR_SIZE - 8}
+              variant="onLight"
+              photoURL={user?.profilePhotoURL}
+            />
           </View>
         </View>
 

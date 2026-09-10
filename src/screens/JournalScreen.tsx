@@ -86,7 +86,7 @@ const JournalScreen: React.FC<{navigation: any}> = ({navigation}) => {
 
   return (
     <View style={s.screen}>
-      <ScreenHeader title="Journal"/>
+      <ScreenHeader title="Journal" onBack={() => navigation.navigate('Home')}/>
       <ScrollView
         style={s.scroll}
         contentContainerStyle={s.container}
