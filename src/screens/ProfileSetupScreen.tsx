@@ -169,16 +169,10 @@ const ProfileSetupScreen: React.FC = () => {
         {step === 4 && (
           <>
             <Text style={cs.sectionLabel}>Stay in the loop</Text>
-            <Text style={cs.sectionSub}>
-              Enable notifications to receive reminders, community updates, and wellness tips.
-            </Text>
 
             <View style={cs.notifCard}>
               <View style={cs.notifRow}>
-                <View>
-                  <Text style={cs.notifTitle}>Push Notifications</Text>
-                  <Text style={cs.notifSub}>Mood reminders, messages, community</Text>
-                </View>
+                <Text style={cs.notifTitle}>Push Notifications</Text>
                 <Switch
                   value={notificationsEnabled}
                   onValueChange={setNotifications}
@@ -187,10 +181,6 @@ const ProfileSetupScreen: React.FC = () => {
                 />
               </View>
             </View>
-
-            <Text style={cs.finishNote}>
-              You can always change this later in your Profile settings.
-            </Text>
           </>
         )}
 
@@ -274,8 +264,6 @@ const cs = StyleSheet.create({
   notifCard: {backgroundColor: Colors.white, borderRadius: 14, padding: 16, marginBottom: 12, shadowColor:'#000', shadowOffset:{width:0,height:1}, shadowOpacity:0.06, shadowRadius:4, elevation:2},
   notifRow:  {flexDirection:'row', alignItems:'center', justifyContent:'space-between'},
   notifTitle:{fontSize:15, fontWeight:'700', color: Colors.text},
-  notifSub:  {fontSize:12, color: Colors.textSecondary, marginTop:3},
-  finishNote:{fontSize:12, color: Colors.textSecondary, textAlign:'center', lineHeight:18},
 
   footer:     {flexDirection:'row', paddingHorizontal:20, paddingVertical:16, gap:12},
   backBtn:    {flex:0.4, borderRadius:12, borderWidth:1.5, borderColor: Colors.primary, paddingVertical:14, alignItems:'center'},

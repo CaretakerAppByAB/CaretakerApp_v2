@@ -1,0 +1,17 @@
+resource_id,title,type,source,url,phone,emotion_ids,last_verified
+lifeline-988,988 Suicide & Crisis Lifeline,hotline,988 Suicide & Crisis Lifeline,https://988lifeline.org/,988,crisis,2026-09-30
+crisis-text-line,Crisis Text Line,hotline,Crisis Text Line,https://www.crisistextline.org/,,crisis,2026-09-30
+alz-helpline,Alzheimer's Association 24/7 Helpline,hotline,Alzheimer's Association,https://www.alz.org/help-support/resources/helpline,1-800-272-3900,crisis|overwhelmed|anxious|lonely|sad,2026-09-30
+alz-caregiver-stress,Caregiver Stress,article,Alzheimer's Association,https://www.alz.org/help-support/caregiving/caregiver-health/caregiver-stress,,overwhelmed|exhausted|frustrated,2026-09-30
+alz-caregiver-depression,Caregiver Depression,article,Alzheimer's Association,https://www.alz.org/help-support/caregiving/caregiver-health/caregiver-depression,,sad|exhausted,2026-09-30
+alz-grief,Grief and Loss as Alzheimer's Progresses,article,Alzheimer's Association,https://www.alz.org/help-support/caregiving/caregiver-health/grief-loss-as-alzheimers-progresses,,grieving|sad,2026-09-30
+alz-support-groups,Find a Support Group,tool,Alzheimer's Association,https://www.alz.org/help-support/community/support-groups,,lonely|grieving|overwhelmed,2026-09-30
+fca-self-care,Taking Care of YOU: Self-Care for Family Caregivers,article,Family Caregiver Alliance,https://www.caregiver.org/resource/taking-care-you-self-care-family-caregivers/,,exhausted|overwhelmed|guilty,2026-09-30
+fca-ambiguous-loss,Caregiving and Ambiguous Loss,article,Family Caregiver Alliance,https://www.caregiver.org/resource/caregiving-and-ambiguous-loss/,,grieving|guilty,2026-09-30
+fca-dementia-behaviors,Understanding Dementia Behaviors,article,Family Caregiver Alliance,https://www.caregiver.org/resource/caregivers-guide-understanding-dementia-behaviors/,,frustrated|overwhelmed,2026-09-30
+fca-depression,Caregiver Depression: A Silent Health Crisis,article,Family Caregiver Alliance,https://www.caregiver.org/resource/caregiver-depression-silent-health-crisis/,,sad|guilty,2026-09-30
+nimh-stressed-out,I'm So Stressed Out! Fact Sheet,article,National Institute of Mental Health,https://www.nimh.nih.gov/health/publications/so-stressed-out-fact-sheet,,anxious|overwhelmed,2026-09-30
+nimh-mental-health,Caring for Your Mental Health,article,National Institute of Mental Health,https://www.nimh.nih.gov/health/topics/caring-for-your-mental-health,,sad|anxious|exhausted,2026-09-30
+apa-stress-tips,Healthy Ways to Handle Stress,article,American Psychological Association,https://www.apa.org/topics/stress/tips,,anxious|frustrated|overwhelmed,2026-09-30
+helpguide-burnout,Caregiver Stress and Burnout,article,HelpGuide,https://www.helpguide.org/mental-health/stress/caregiver-stress-and-burnout,,exhausted|guilty|frustrated|lonely,2026-09-30
+samhsa-helpline,SAMHSA National Helpline,hotline,Substance Abuse and Mental Health Services Administration,https://www.samhsa.gov/find-help/helplines/national-helpline,1-800-662-4357,sad|anxious,2026-09-30

@@ -114,11 +114,11 @@ If it says "not recognized", the Path variable was not saved correctly. Go back 
 Open PowerShell and run:
 ```
 cd C:\Users\YOUR_USERNAME\Projects
-git clone https://github.com/YOUR_REPO_URL/AlzApp.git
+git clone https://github.com/CaretakerAppByAB/CaretakerApp_v2.git AlzApp
 cd AlzApp
 ```
 
-Replace `YOUR_REPO_URL` with the actual GitHub URL your team lead shared.
+You need access to the CaretakerAppByAB GitHub organization. Ask the team lead to add you.
 
 If you don't have git installed, download it from https://git-scm.com and run the installer with all defaults.
 
@@ -127,8 +127,10 @@ If you don't have git installed, download it from https://git-scm.com and run th
 ## Step 8 — Install packages
 
 ```
-npm install --legacy-peer-deps "@react-navigation/native@^7" "@react-navigation/native-stack@^7" "@react-navigation/bottom-tabs@^7" "react-native-screens@latest" "react-native-safe-area-context@^5" "react-native-gesture-handler@^2" "@react-native-async-storage/async-storage@^2"
+npm install
 ```
+
+This installs the exact versions in `package-lock.json`. Don't add packages one by one.
 
 This will take a few minutes. Ignore any yellow warning messages — they are normal.
 
@@ -192,7 +194,7 @@ Press **R** twice in PowerShell 1 to reload the app after making code changes.
 
 ```
 git pull
-npm install --legacy-peer-deps
+npm install
 npx react-native start --reset-cache
 ```
 

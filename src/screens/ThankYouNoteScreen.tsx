@@ -138,7 +138,7 @@ const ThankYouNoteScreen: React.FC<{route: any; navigation: any}> = ({route, nav
 
           {/* Encryption notice */}
           <Text style={s.encNotice}>
-            🔒 End-to-end encrypted — only you and {firstName} can read this
+            🔒 End-to-end encrypted
           </Text>
 
           {/* Letter card + side options */}

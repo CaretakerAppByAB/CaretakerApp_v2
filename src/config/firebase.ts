@@ -9,7 +9,6 @@
 import {getApps, initializeApp} from 'firebase/app';
 import {getFirestore, initializeFirestore} from 'firebase/firestore';
 import {initializeAuth, getAuth, getReactNativePersistence} from 'firebase/auth';
-import {getStorage} from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // ▼ YOUR CONFIG — same values you already pasted for the community forum ▼
@@ -40,6 +39,5 @@ if (!getApps().length) {
 
 const app = getApps()[0];
 
-export const db      = getFirestore(app);
-export const auth    = getAuth(app);
-export const storage = getStorage(app);
+export const db   = getFirestore(app);
+export const auth = getAuth(app);

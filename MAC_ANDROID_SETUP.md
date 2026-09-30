@@ -133,26 +133,21 @@ Wait for the full download (~130MB). It will save to your Downloads folder.
 
 ```bash
 cd ~/Projects
-git clone https://github.com/YOUR_REPO_URL/AlzApp.git
+git clone https://github.com/CaretakerAppByAB/CaretakerApp_v2.git AlzApp
 cd AlzApp
 ```
 
-Replace `YOUR_REPO_URL` with the actual GitHub URL your team lead shared.
+You need access to the CaretakerAppByAB GitHub organization. Ask the team lead to add you.
 
 ---
 
 ## Step 10 — Install packages
 
 ```bash
-npm install --legacy-peer-deps \
-  "@react-navigation/native@^7" \
-  "@react-navigation/native-stack@^7" \
-  "@react-navigation/bottom-tabs@^7" \
-  "react-native-screens@latest" \
-  "react-native-safe-area-context@^5" \
-  "react-native-gesture-handler@^2" \
-  "@react-native-async-storage/async-storage@^2"
+npm install
 ```
+
+This installs the exact versions in `package-lock.json`. Don't add packages one by one.
 
 Ignore yellow warning messages — they are normal.
 
@@ -233,7 +228,7 @@ Press **R** in Terminal 1 to reload after code changes.
 
 ```bash
 git pull
-npm install --legacy-peer-deps
+npm install
 npx react-native start --reset-cache
 ```
 

@@ -29,7 +29,6 @@ const SupportActionScreen: React.FC<{navigation: any}> = ({navigation}) => {
     <View style={s.screen}>
       <ScreenHeader
         title="Support Action"
-        subtitle="How can we help you"
         onBack={() => navigation.navigate('Home')}
       />
       <View style={s.body}>

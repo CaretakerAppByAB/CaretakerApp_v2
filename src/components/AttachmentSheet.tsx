@@ -9,7 +9,7 @@ import {Modal, View, Text, TouchableOpacity, StyleSheet, Alert, Pressable, Activ
 import Svg, {Path, Circle, Rect} from 'react-native-svg';
 import {EnvelopeOpenIcon} from './icons/TabIcons';
 import {Colors} from '../theme/colors';
-import {pickImageFromLibrary, pickImageFromCamera} from '../services/mediaService';
+import {pickImageFromLibrary, pickImageFromCamera, PickedImage} from '../services/mediaService';
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -39,20 +39,20 @@ const CameraIcon = () => (
 interface AttachmentSheetProps {
   visible: boolean;
   onClose: () => void;
-  onSendImage: (uri: string) => void;
+  onSendImage: (image: PickedImage) => void;
   onThankYouNote: () => void;
 }
 
 const AttachmentSheet: React.FC<AttachmentSheetProps> = ({visible, onClose, onSendImage, onThankYouNote}) => {
   const [picking, setPicking] = useState<'Photo' | 'Take Photo' | null>(null);
 
-  const handlePickPhoto = (label: 'Photo' | 'Take Photo', pick: () => Promise<{uri: string} | null>) => async () => {
+  const handlePickPhoto = (label: 'Photo' | 'Take Photo', pick: () => Promise<PickedImage | null>) => async () => {
     setPicking(label);
     try {
       const image = await pick();
       if (image) {
         onClose();
-        onSendImage(image.uri);
+        onSendImage(image);
       }
     } catch (err: any) {
       Alert.alert('Error', err?.message ?? 'Could not open the photo picker.');

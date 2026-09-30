@@ -133,7 +133,7 @@ const CommentsModal: React.FC<CommentsModalProps> = ({visible, postId, authorNam
             ) : loadError ? (
               <Text style={[s.empty, {color: Colors.error}]}>{loadError}</Text>
             ) : comments.length === 0 ? (
-              <Text style={s.empty}>No comments yet. Be the first to reply!</Text>
+              <Text style={s.empty}>No comments yet</Text>
             ) : (
               comments.map(c => (
                 <View key={c.id} style={s.commentRow}>

@@ -33,13 +33,11 @@ const JournalTypeSelectScreen: React.FC<{navigation: any}> = ({navigation}) => {
         {/* Guided option */}
         <TouchableOpacity style={s.optionCard} onPress={startGuided} activeOpacity={0.8}>
           <Text style={s.optionTitle}>Guided Journal</Text>
-          <Text style={s.optionSub}>Reflect using personalized prompts</Text>
         </TouchableOpacity>
 
         {/* Free Write option */}
         <TouchableOpacity style={[s.optionCard, s.optionCardAlt]} onPress={startFreeWrite} activeOpacity={0.8}>
           <Text style={s.optionTitle}>Free Write</Text>
-          <Text style={s.optionSub}>Explore your thoughts without guidance</Text>
         </TouchableOpacity>
       </View>
     </View>
@@ -92,7 +90,6 @@ const s = StyleSheet.create({
     backgroundColor: Colors.backgroundLight,
   },
   optionTitle: {fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 6},
-  optionSub:   {fontSize: 13, color: '#7E7E7E', lineHeight: 19},
 });
 
 export default JournalTypeSelectScreen;

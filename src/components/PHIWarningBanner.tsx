@@ -51,8 +51,8 @@ const PHIWarningBanner: React.FC<Props> = ({
           </Text>
           <Text style={[s.body, {color: theme.text}]}>
             {isBlock
-              ? `Found ${summarisePHI(matches)}. Community posts are public to all users and cannot be encrypted. Please remove identifying details before posting.`
-              : `Found ${summarisePHI(matches)}. Consider using initials to protect patient privacy.`}
+              ? `Found ${summarisePHI(matches)}. Remove it before posting.`
+              : `Found ${summarisePHI(matches)}. Consider using initials.`}
           </Text>
         </View>
       </View>

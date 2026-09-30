@@ -1,18 +1,15 @@
 /**
- * AlzApp — Resource Library Screen (SKELETON)
+ * AlzApp — Mental Health Resources Screen
  *
- * DEVELOPER NOTE:
- * This screen is a placeholder with a single dummy resource card.
- * Your team needs to implement:
- *   - A full library of mental health resources (see data structure below)
- *   - Keyword extraction from journal entries mapped to resource tags
- *   - Category filtering and search
- *   - Region-based resource recommendations
+ * Suggests resources based on emotions detected in the user's recent journal
+ * entries (see services/resourceMatcher.ts), and lets them browse any emotion
+ * manually. Resource content comes from /resources/*.csv. To update it, edit
+ * the CSVs and run `npm run build:resources`.
  *
- * Each real resource should follow the Resource interface shape below.
+ * Journal analysis happens on-device only; nothing is stored or uploaded.
  */
 
-import React from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {
   View,
   Text,
@@ -21,31 +18,112 @@ import {
   TouchableOpacity,
   Linking,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import {Colors} from '../theme/colors';
 import ScreenHeader from '../components/ScreenHeader';
+import {useAuth} from '../context/AuthContext';
+import {subscribeToEntries, JournalEntry} from '../services/journalService';
+import {
+  scoreEmotions,
+  resourcesForEmotion,
+  Emotion,
+  Resource,
+  ResourceType,
+} from '../services/resourceMatcher';
+import {EMOTIONS, KEYWORDS, RESOURCES} from '../data/resourceData.generated';
 
-// ── Data structure (for developers) ──────────────────────────────────────────
-// When populating the real library, each resource should have this shape:
-//
-// interface Resource {
-//   id: string;
-//   title: string;
-//   description: string;
-//   category: string;
-//   tags: string[];        // matched against journal keywords
-//   phone?: string;        // optional call button
-//   url?: string;          // optional web link
-//   emoji: string;
-//   region?: string;       // for geo-based filtering
-// }
-// ─────────────────────────────────────────────────────────────────────────────
+const FOR_YOU = '__for_you__';
+
+const TYPE_LABELS: Record<ResourceType, string> = {
+  article: 'Article',
+  podcast: 'Podcast',
+  video:   'Video',
+  hotline: 'Helpline',
+  tool:    'Tool',
+  book:    'Book',
+};
+
+const EMOTION_BY_ID = new Map(EMOTIONS.map(e => [e.id, e]));
+const CRISIS_RESOURCES = EMOTIONS.filter(e => e.isCrisis).flatMap(e =>
+  resourcesForEmotion(e.id, RESOURCES),
+);
+
+const open = (url: string) =>
+  Linking.openURL(url).catch(() =>
+    Alert.alert('Error', 'Could not open this link.'),
+  );
+const call = (phone: string) => open(`tel:${phone.replace(/[^\d+]/g, '')}`);
+
+// ── Resource card ─────────────────────────────────────────────────────────────
+
+const ResourceCard: React.FC<{resource: Resource}> = ({resource}) => (
+  <View style={styles.card}>
+    <View style={styles.cardMeta}>
+      <View style={styles.typeTag}>
+        <Text style={styles.typeTagText}>{TYPE_LABELS[resource.type]}</Text>
+      </View>
+      <Text style={styles.source} numberOfLines={1}>{resource.source}</Text>
+    </View>
+    <Text style={styles.cardTitle}>{resource.title}</Text>
+    <View style={styles.actionRow}>
+      {!!resource.phone && (
+        <TouchableOpacity style={styles.actionBtn} onPress={() => call(resource.phone!)}>
+          <Text style={styles.actionBtnText}>Call {resource.phone}</Text>
+        </TouchableOpacity>
+      )}
+      {!!resource.url && (
+        <TouchableOpacity
+          style={[styles.actionBtn, !!resource.phone && styles.actionBtnSecondary]}
+          onPress={() => open(resource.url!)}>
+          <Text style={[styles.actionBtnText, !!resource.phone && styles.actionBtnTextSecondary]}>
+            {resource.type === 'hotline' ? 'Website' : 'Open'}
+          </Text>
+        </TouchableOpacity>
+      )}
+    </View>
+  </View>
+);
+
+const EmotionSection: React.FC<{emotion: Emotion; showHeading: boolean}> = ({emotion, showHeading}) => {
+  const list = resourcesForEmotion(emotion.id, RESOURCES);
+  return (
+    <View style={styles.section}>
+      {showHeading && <Text style={styles.sectionTitle}>{emotion.label}</Text>}
+      {list.length ? (
+        list.map(r => <ResourceCard key={r.id} resource={r}/>)
+      ) : (
+        <Text style={styles.empty}>Resources for this topic are coming soon.</Text>
+      )}
+    </View>
+  );
+};
+
+// ── Screen ────────────────────────────────────────────────────────────────────
 
 const ResourceLibraryScreen: React.FC<{navigation: any}> = ({navigation}) => {
-  const openURL = (url: string) =>
-    Linking.openURL(url).catch(() =>
-      Alert.alert('Error', 'Could not open this link.'),
-    );
+  const {user} = useAuth();
+  const [entries, setEntries] = useState<JournalEntry[] | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user) return;
+    return subscribeToEntries(user.uid, setEntries, () => setEntries([]));
+  }, [user]);
+
+  const detected = useMemo(
+    () => (entries ? scoreEmotions(entries, KEYWORDS, EMOTIONS) : []),
+    [entries],
+  );
+  const inCrisis = detected.some(d => EMOTION_BY_ID.get(d.emotionId)?.isCrisis);
+  const suggested = detected
+    .map(d => EMOTION_BY_ID.get(d.emotionId)!)
+    .filter(e => e && !e.isCrisis);
+  const browsable = EMOTIONS.filter(e => !e.isCrisis);
+
+  // Default to "For you" when we have suggestions, otherwise the first emotion.
+  const active = selected ?? (suggested.length ? FOR_YOU : browsable[0]?.id);
+  const activeEmotion = active && active !== FOR_YOU ? EMOTION_BY_ID.get(active) : undefined;
 
   return (
     <View style={styles.screen}>
@@ -55,69 +133,73 @@ const ResourceLibraryScreen: React.FC<{navigation: any}> = ({navigation}) => {
         contentContainerStyle={styles.container}
         showsVerticalScrollIndicator={false}>
 
-      {/* ── Under development banner ── */}
-      <View style={styles.devBanner}>
-        <Text style={styles.devBannerEmoji}>🚧</Text>
-        <View style={styles.devBannerBody}>
-          <Text style={styles.devBannerTitle}>
-            Resource Library — Under Development
-          </Text>
-          <Text style={styles.devBannerSub}>
-            Your content team will populate this with real mental health
-            resources tagged to caregivers' needs.
-          </Text>
-        </View>
-      </View>
-
-      {/* ── Single placeholder resource card ── */}
-      <View style={styles.card}>
-        <View style={styles.cardHeader}>
-          <View style={styles.cardHeaderText}>
-            <Text style={styles.cardTitle}>Placeholder Resource</Text>
-            <View style={styles.categoryTag}>
-              <Text style={styles.categoryTagText}>Example Category</Text>
+        {/* ── Crisis card (only when crisis language is detected) ── */}
+        {inCrisis && (
+          <View style={styles.crisisCard}>
+            <Text style={styles.crisisTitle}>Help is available 24/7</Text>
+            <View style={styles.actionRow}>
+              <TouchableOpacity style={styles.crisisBtn} onPress={() => call('988')}>
+                <Text style={styles.crisisBtnText}>Call 988</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.crisisBtn} onPress={() => open('sms:988')}>
+                <Text style={styles.crisisBtnText}>Text 988</Text>
+              </TouchableOpacity>
             </View>
+            {CRISIS_RESOURCES.filter(r => r.phone !== '988').map(r => (
+              <ResourceCard key={r.id} resource={r}/>
+            ))}
           </View>
+        )}
+
+        {/* ── Intro ── */}
+        <View style={styles.intro}>
+          {entries === null ? (
+            <ActivityIndicator color={Colors.primary}/>
+          ) : suggested.length ? (
+            <Text style={styles.introTitle}>Picked for you</Text>
+          ) : (
+            <Text style={styles.introTitle}>How are you feeling?</Text>
+          )}
         </View>
 
-        <Text style={styles.cardDesc}>
-          Replace this with a real mental health resource. 
-        </Text>
-
-        {/* Tag pills */}
-        <View style={styles.tagRow}>
-          {['placeholder', 'example', 'todo'].map(tag => (
-            <View key={tag} style={styles.tagPill}>
-              <Text style={styles.tagPillText}>{tag}</Text>
-            </View>
+        {/* ── Topic chips ── */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.chipScroll}
+          contentContainerStyle={styles.chipRow}>
+          {suggested.length > 0 && (
+            <Chip label="For you" active={active === FOR_YOU} onPress={() => setSelected(FOR_YOU)}/>
+          )}
+          {browsable.map(e => (
+            <Chip key={e.id} label={e.label} active={active === e.id} onPress={() => setSelected(e.id)}/>
           ))}
-        </View>
+        </ScrollView>
 
-        {/* Action */}
-        <TouchableOpacity
-          style={styles.actionBtn}
-          onPress={() => openURL('https://www.google.com')}>
-          <Text style={styles.actionBtnText}>🌐 Open Resource</Text>
+        {/* ── Resources ── */}
+        {active === FOR_YOU
+          ? suggested.map(e => <EmotionSection key={e.id} emotion={e} showHeading/>)
+          : activeEmotion && <EmotionSection emotion={activeEmotion} showHeading={false}/>}
+
+        {/* ── Footer ── */}
+        <TouchableOpacity style={styles.footerCrisis} onPress={() => call('988')}>
+          <Text style={styles.footerCrisisText}>
+            In crisis? Call or text <Text style={styles.introStrong}>988</Text>
+          </Text>
         </TouchableOpacity>
-      </View>
-
-      {/* ── Developer notes card ── */}
-      <View style={styles.noteCard}>
-        <Text style={styles.noteTitle}>📝 Developer Notes</Text>
-        <Text style={styles.noteText}>
-          {'• Add real resources to a RESOURCES array in this file\n'}
-          {'• Each resource needs: title, description, category, tags[], emoji\n'}
-          {'• Optional: phone (shows Call button), url (shows Web button)\n'}
-          {'• tags[] will be matched against keywords from journal entries\n'}
-          {'• Add search bar filtering by title/tags\n'}
-          {'• Add category chip filter row\n'}
-          {'• region field ready for geo-filtering — hook into user profile'}
-        </Text>
-      </View>
       </ScrollView>
     </View>
   );
 };
+
+const Chip: React.FC<{label: string; active: boolean; onPress: () => void}> = ({label, active, onPress}) => (
+  <TouchableOpacity
+    style={[styles.chip, active && styles.chipActive]}
+    onPress={onPress}
+    activeOpacity={0.8}>
+    <Text style={[styles.chipText, active && styles.chipTextActive]}>{label}</Text>
+  </TouchableOpacity>
+);
 
 // ── Styles ────────────────────────────────────────────────────────────────────
 
@@ -126,20 +208,45 @@ const styles = StyleSheet.create({
   scroll: {flex: 1, backgroundColor: Colors.backgroundLight},
   container: {padding: 16, paddingBottom: 40},
 
-  devBanner: {
-    backgroundColor: '#FEF3C7',
-    borderRadius: 14,
-    padding: 14,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
+  crisisCard: {
+    backgroundColor: '#FEF2F2',
+    borderRadius: 18,
+    padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#FDE68A',
+    borderColor: '#FECACA',
   },
-  devBannerEmoji: {fontSize: 22, marginRight: 10, marginTop: 1},
-  devBannerBody: {flex: 1},
-  devBannerTitle: {fontSize: 14, fontWeight: '700', color: '#92400E'},
-  devBannerSub: {fontSize: 12, color: '#B45309', marginTop: 3, lineHeight: 17},
+  crisisTitle: {fontSize: 16, fontWeight: '700', color: '#991B1B', marginBottom: 12},
+  crisisBtn: {
+    backgroundColor: '#B91C1C',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 10,
+    marginRight: 8,
+    marginBottom: 12,
+  },
+  crisisBtnText: {color: Colors.white, fontSize: 14, fontWeight: '700'},
+
+  intro: {marginBottom: 14, minHeight: 24},
+  introTitle: {fontSize: 18, fontWeight: '700', color: Colors.text, marginBottom: 4},
+  introStrong: {fontWeight: '700', color: Colors.text},
+
+  chipScroll: {marginHorizontal: -16, marginBottom: 16},
+  chipRow: {paddingHorizontal: 16},
+  chip: {
+    backgroundColor: Colors.primaryLight,
+    borderRadius: 20,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    marginRight: 8,
+  },
+  chipActive: {backgroundColor: Colors.primary},
+  chipText: {fontSize: 13, fontWeight: '600', color: Colors.primary600},
+  chipTextActive: {color: Colors.white},
+
+  section: {marginBottom: 8},
+  sectionTitle: {fontSize: 16, fontWeight: '700', color: Colors.text, marginBottom: 10},
+  empty: {fontSize: 13, color: Colors.textSecondary, fontStyle: 'italic', marginBottom: 16},
 
   card: {
     backgroundColor: Colors.white,
@@ -152,77 +259,36 @@ const styles = StyleSheet.create({
     shadowRadius: 6,
     elevation: 2,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  cardEmoji: {fontSize: 26, marginRight: 12, marginTop: 2},
-  cardHeaderText: {flex: 1},
-  cardTitle: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 5,
-  },
-  categoryTag: {
+  cardMeta: {flexDirection: 'row', alignItems: 'center', marginBottom: 8},
+  typeTag: {
     backgroundColor: Colors.primaryLight,
-    alignSelf: 'flex-start',
     borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 3,
+    marginRight: 8,
   },
-  categoryTagText: {color: Colors.primaryDark, fontSize: 11, fontWeight: '600'},
-  cardDesc: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-    lineHeight: 19,
-    marginBottom: 12,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    marginBottom: 12,
-  },
-  tagPill: {
-    backgroundColor: Colors.backgroundLight,
-    borderRadius: 8,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginRight: 6,
-    marginBottom: 4,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  tagPillText: {fontSize: 10, color: Colors.textSecondary},
+  typeTagText: {color: Colors.primaryDark, fontSize: 11, fontWeight: '600'},
+  source: {flex: 1, fontSize: 11, color: Colors.textSecondary},
+  cardTitle: {fontSize: 15, fontWeight: '700', color: Colors.text, marginBottom: 12},
+  actionRow: {flexDirection: 'row', flexWrap: 'wrap'},
   actionBtn: {
     backgroundColor: Colors.primary,
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 10,
-    alignSelf: 'flex-start',
+    marginRight: 8,
   },
+  actionBtnSecondary: {backgroundColor: Colors.primaryLight},
   actionBtnText: {color: Colors.white, fontSize: 13, fontWeight: '700'},
+  actionBtnTextSecondary: {color: Colors.primary},
 
-  noteCard: {
-    backgroundColor: Colors.white,
+  footerCrisis: {
+    backgroundColor: Colors.primaryLight,
     borderRadius: 14,
-    padding: 16,
-    borderWidth: 1.5,
-    borderColor: Colors.border,
+    padding: 14,
+    marginTop: 8,
   },
-  noteTitle: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: Colors.text,
-    marginBottom: 10,
-  },
-  noteText: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-    lineHeight: 20,
-    fontFamily: 'Courier',
-  },
+  footerCrisisText: {fontSize: 13, color: Colors.text, lineHeight: 19, textAlign: 'center'},
 });
 
 export default ResourceLibraryScreen;

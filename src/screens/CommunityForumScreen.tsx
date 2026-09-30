@@ -213,7 +213,6 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
             <Avatar name={authorName} size={AVATAR_SIZE} photoURL={authorPhotoURL}/>
             <View>
               <Text style={s.modalAuthorName}>{authorName}</Text>
-              <Text style={s.modalAuthorSub}>Sharing with the community</Text>
             </View>
           </View>
 
@@ -227,7 +226,7 @@ const NewPostModal: React.FC<NewPostModalProps> = ({
           {/* Public visibility notice */}
           <View style={s.publicNotice}>
             <Text style={s.publicNoticeText}>
-              🌐 Public post — visible to all AlzApp users. Never include patient names or details.
+              🌐 Public post · no patient names
             </Text>
           </View>
 
@@ -422,7 +421,7 @@ const CommunityForumScreen: React.FC<{navigation: any}> = ({navigation}) => {
           showsVerticalScrollIndicator={false}>
           {posts.length === 0 && (
             <Text style={s.emptyText}>
-              No posts yet. Be the first to share something! 👆
+              No posts yet
             </Text>
           )}
           {posts.map(post => (
@@ -569,7 +568,6 @@ const s = StyleSheet.create({
     flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 16,
   },
   modalAuthorName: {fontSize: 14, fontWeight: '700', color: Colors.text},
-  modalAuthorSub: {fontSize: 12, color: Colors.textSecondary, marginTop: 2},
   modalInput: {
     fontSize: 15, color: Colors.text, lineHeight: 22,
     minHeight: 120, textAlignVertical: 'top',

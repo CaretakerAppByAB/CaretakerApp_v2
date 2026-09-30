@@ -294,7 +294,7 @@ const ComposeModal: React.FC<ComposeModalProps> = ({visible, currentUser, onClos
 
           {notFound && (
             <Text style={s.notFound}>
-              No user found. Make sure they've created an AlzApp account.
+              No user found
             </Text>
           )}
 

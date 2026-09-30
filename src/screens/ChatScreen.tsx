@@ -24,7 +24,7 @@ import AttachmentSheet from '../components/AttachmentSheet';
 import Avatar from '../components/Avatar';
 import {Colors} from '../theme/colors';
 import {detectPHI, redactPHI} from '../services/phiDetection';
-import {uploadImage} from '../services/mediaService';
+import {uploadImage, PickedImage} from '../services/mediaService';
 import {
   subscribeToMessages, sendMessage, markConversationRead, Message,
 } from '../services/messagingService';
@@ -177,10 +177,10 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
   };
 
   // Uploads a picked/captured photo, then sends it as an image message
-  const handleSendImage = async (uri: string) => {
+  const handleSendImage = async (image: PickedImage) => {
     if (!user) return;
     try {
-      const url = await uploadImage({uri, fileName: `chat_${Date.now()}.jpg`, type: 'image/jpeg'}, 'chatImages');
+      const url = await uploadImage(image, 'chatImages');
       await sendMessage(conversationId, user.uid, user.name, receiverId, '', 'image', url);
     } catch (err: any) {
       console.error('[ChatScreen] send image failed:', err);
@@ -249,14 +249,14 @@ const ChatScreen: React.FC<{route: any; navigation: any}> = ({route, navigation}
 
           <View style={s.encBanner}>
             <LockIcon/>
-            <Text style={s.encBannerText}>Messages in this chat are end-to-end encrypted</Text>
+            <Text style={s.encBannerText}>End-to-end encrypted</Text>
           </View>
 
           <View style={s.dateSep}><Text style={s.dateSepText}>Today</Text></View>
 
           {loading && <ActivityIndicator color={Colors.primary} style={{marginTop:20}}/>}
           {!loading && messages.length === 0 && (
-            <Text style={s.empty}>Send a message to start the conversation.</Text>
+            <Text style={s.empty}>No messages yet</Text>
           )}
 
           {messages.map(msg => {

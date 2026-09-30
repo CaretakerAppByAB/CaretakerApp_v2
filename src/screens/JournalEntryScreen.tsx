@@ -117,29 +117,6 @@ const JournalEntryScreen: React.FC<{route: any; navigation: any}> = ({route, nav
     ]);
   }, [user, existingEntry, navigation]);
 
-  // ── Header buttons ──────────────────────────────────────────────────────────
-
-  const headerRight = (
-    <View style={{flexDirection: 'row', alignItems: 'center', gap: 16}}>
-      {existingEntry && (
-        <TouchableOpacity onPress={handleDelete} activeOpacity={0.7}>
-          <Text style={{color: 'rgba(255,180,180,1)', fontWeight: '600', fontSize: 14}}>Delete</Text>
-        </TouchableOpacity>
-      )}
-      <TouchableOpacity onPress={handleSave} disabled={!content.trim() || saving || saved} activeOpacity={0.7}>
-        {saving
-          ? <ActivityIndicator color={Colors.white} size="small"/>
-          : <Text style={{
-              color: content.trim() && !saved ? Colors.white : 'rgba(255,255,255,0.45)',
-              fontWeight: '700', fontSize: 15,
-            }}>
-              {saved ? 'Saved ✓' : 'Save'}
-            </Text>
-        }
-      </TouchableOpacity>
-    </View>
-  );
-
   const cyclePrompt = () => {
     const next = (promptIdx + 1) % GUIDED_PROMPTS.length;
     setPromptIdx(next);
@@ -149,7 +126,7 @@ const JournalEntryScreen: React.FC<{route: any; navigation: any}> = ({route, nav
 
   return (
     <View style={s.screen}>
-      <ScreenHeader title="Journal Entry" onBack={() => navigation.goBack()} rightElement={headerRight}/>
+      <ScreenHeader title="Journal Entry" onBack={() => navigation.goBack()}/>
       <KeyboardAvoidingView style={s.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView
           style={s.scroll}
@@ -161,7 +138,7 @@ const JournalEntryScreen: React.FC<{route: any; navigation: any}> = ({route, nav
           <View style={s.encryptedBar}>
             <LockIcon/>
             <Text style={s.encryptedText}>
-              End-to-end encrypted — only you can read this
+              End-to-end encrypted
             </Text>
           </View>
 
@@ -210,6 +187,23 @@ const JournalEntryScreen: React.FC<{route: any; navigation: any}> = ({route, nav
           <Text style={s.wordCount}>
             {content.trim().split(/\s+/).filter(Boolean).length} words
           </Text>
+
+          {/* Save / delete */}
+          <TouchableOpacity
+            style={[s.saveBtn, (!content.trim() || saved) && s.saveBtnDisabled]}
+            onPress={handleSave}
+            disabled={!content.trim() || saving || saved}
+            activeOpacity={0.8}>
+            {saving
+              ? <ActivityIndicator color={Colors.white} size="small"/>
+              : <Text style={s.saveBtnText}>{saved ? 'Saved ✓' : 'Save Entry'}</Text>}
+          </TouchableOpacity>
+
+          {existingEntry && (
+            <TouchableOpacity style={s.deleteBtn} onPress={handleDelete} activeOpacity={0.7}>
+              <Text style={s.deleteBtnText}>Delete Entry</Text>
+            </TouchableOpacity>
+          )}
 
           <View style={{height: 32}}/>
         </ScrollView>
@@ -263,6 +257,18 @@ const s = StyleSheet.create({
     minHeight: 300, padding: 0,
   },
   wordCount: {textAlign: 'right', fontSize: 11, color: '#BBBBBB', marginTop: 8, marginRight: 4},
+
+  saveBtn: {
+    backgroundColor: Colors.primary,
+    borderRadius: 14,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  saveBtnDisabled: {opacity: 0.4},
+  saveBtnText:     {color: Colors.white, fontSize: 16, fontWeight: '700'},
+  deleteBtn:       {alignItems: 'center', paddingVertical: 14, marginTop: 4},
+  deleteBtnText:   {color: Colors.error, fontSize: 14, fontWeight: '600'},
 });
 
 export default JournalEntryScreen;

@@ -1,0 +1,10 @@
+emotion_id,label,is_crisis,sort_order
+crisis,In crisis,true,0
+overwhelmed,Overwhelmed,false,1
+anxious,Anxious,false,2
+exhausted,Exhausted,false,3
+sad,Sad,false,4
+grieving,Grieving,false,5
+lonely,Lonely,false,6
+guilty,Guilty,false,7
+frustrated,Frustrated,false,8

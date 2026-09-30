@@ -167,7 +167,7 @@ const MoodLineChart: React.FC<{weekMoods: (MoodType | undefined)[]}> = ({weekMoo
 
       {!hasAnyData && (
         <Text style={styles.chartEmptyNote}>
-          Log your mood daily to see your week take shape here.
+          No moods logged this week
         </Text>
       )}
     </View>

@@ -121,9 +121,6 @@ const JournalScreen: React.FC<{navigation: any}> = ({navigation}) => {
           {!loading && entries.length === 0 && (
             <View style={s.emptyState}>
               <Text style={s.emptyTitle}>No entries yet</Text>
-              <Text style={s.emptySub}>
-                Tap "New Entry" above to write your first journal entry.
-              </Text>
             </View>
           )}
 
@@ -152,9 +149,6 @@ const JournalScreen: React.FC<{navigation: any}> = ({navigation}) => {
             </TouchableOpacity>
           ))}
 
-          {entries.length > 0 && (
-            <Text style={s.hintText}>Long-press an entry to delete it</Text>
-          )}
         </>
       )}
 
@@ -230,8 +224,6 @@ const s = StyleSheet.create({
   // Empty & hint
   emptyState: {alignItems: 'center', marginTop: 32, marginBottom: 16},
   emptyTitle: {fontSize: 16, fontWeight: '700', color: Colors.primary, marginBottom: 6},
-  emptySub:   {fontSize: 13, color: Colors.textSecondary, textAlign: 'center', lineHeight: 20},
-  hintText:   {textAlign: 'center', fontSize: 11, color: '#BBBBBB', marginTop: 8},
 });
 
 export default JournalScreen;

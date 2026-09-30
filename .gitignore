@@ -8,8 +8,8 @@ ios/DerivedData/
 *.orig
 
 # Xcode
-*.xcworkspace/xcuserdata
-*.xcodeproj/xcuserdata
+**/*.xcworkspace/xcuserdata/
+**/*.xcodeproj/xcuserdata/
 *.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist
 
 # Metro

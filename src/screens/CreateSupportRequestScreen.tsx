@@ -167,7 +167,7 @@ const CreateSupportRequestScreen: React.FC<{navigation: any; route: any}> = ({na
 
           <View style={s.anonNotice}>
             <Text style={s.anonNoticeText}>
-              🌐 Posted anonymously to the community Help/Advice board, so anyone on AlzApp can offer advice.
+              🌐 Posted anonymously
             </Text>
           </View>
 
